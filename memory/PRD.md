@@ -61,12 +61,24 @@ A monolithic backend architecture for a complete ride-sharing application suppor
 - [x] WebSocket for rider connections
 - [x] Real-time location updates
 - [x] Ride status broadcasts
+- [x] **Push Notifications via WebSocket**:
+  - Ride accepted, driver arriving, driver arrived
+  - Ride started, completed, cancelled
+  - Payment received, rating received
+  - Pending notification queue for offline users
 
 ### Phase 5: Ratings & Admin ✅
 - [x] Rating system (1-5 stars + review)
 - [x] Admin dashboard with stats
 - [x] Driver verification workflow
 - [x] Promo code management
+
+### Phase 6: Driver Earnings Reports ✅
+- [x] GET /api/earnings/stats - Today/Week/Month/All-time stats
+- [x] GET /api/earnings/daily - Daily breakdown (last N days)
+- [x] GET /api/earnings/summary - Period-based summary
+- [x] GET /api/earnings/weekly-comparison - This week vs last week
+- [x] GET /api/earnings/rides - Individual ride earnings
 
 ## What's Been Implemented
 **Date: April 4, 2026**
@@ -80,7 +92,7 @@ A monolithic backend architecture for a complete ride-sharing application suppor
 - FareConfigs
 - PromoCodes, PromoUsages
 
-### API Endpoints (45+ endpoints)
+### API Endpoints (50+ endpoints)
 - `/api/auth/*` - Authentication (send-otp, verify-otp, refresh)
 - `/api/users/*` - User profile, saved addresses
 - `/api/drivers/*` - Driver registration, vehicles, location
@@ -89,8 +101,15 @@ A monolithic backend architecture for a complete ride-sharing application suppor
 - `/api/ratings/*` - Create and view ratings
 - `/api/admin/*` - Dashboard, users, drivers, fare configs
 - `/api/promo/*` - Validate and apply promo codes
+- `/api/earnings/*` - Driver earnings stats, daily, weekly reports
 - `/ws/driver/{id}` - Driver WebSocket
 - `/ws/rider/{id}` - Rider WebSocket
+
+### Push Notifications (WebSocket-based)
+- NotificationType enum with 12 notification types
+- Automatic notifications on ride status changes
+- Pending notification queue for offline users
+- Driver location broadcast to rider during ride
 
 ### Vehicle Types & Fares
 | Type | Base Fare | Per KM | Per Min | Min Fare |
@@ -105,17 +124,18 @@ A monolithic backend architecture for a complete ride-sharing application suppor
 
 ### P0 (Critical) - Done
 - ✅ All core ride-sharing functionality implemented
+- ✅ Push notifications via WebSocket
+- ✅ Driver earnings reports
 
 ### P1 (Important) - Deferred
 - [ ] IDFC Bank payment gateway integration
-- [ ] Push notifications
-- [ ] Driver document verification (upload/review)
+- [ ] Driver document upload & verification
 
 ### P2 (Nice to have)
 - [ ] Ride scheduling (future bookings)
-- [ ] Driver earnings reports
 - [ ] Rider referral program
 - [ ] Multi-language support
+- [ ] SMS notifications for offline users
 
 ## Next Tasks
 1. Test complete ride flow end-to-end with real Mappls API
