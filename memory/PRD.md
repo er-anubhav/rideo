@@ -138,10 +138,12 @@ A monolithic backend architecture for a complete ride-sharing application suppor
 - [ ] SMS notifications for offline users
 
 ## Next Tasks
-1. Test complete ride flow end-to-end with real Mappls API
-2. Deploy to production environment
-3. Integrate IDFC Bank payment gateway when API docs available
-4. Add push notifications for ride updates
+1. ~~Add push notifications~~ ✅ Done (WebSocket-based)
+2. ~~Add driver earnings reports~~ ✅ Done
+3. ~~Document the codebase~~ ✅ Done
+4. Deploy to production environment
+5. Integrate IDFC Bank payment gateway when API docs available
+6. Add driver document upload & verification
 
 ## API Keys & Configuration
 ```
