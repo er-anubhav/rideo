@@ -13,6 +13,7 @@ from models.driver import DriverProfile, Vehicle, VehicleType
 from routers.users import get_current_user
 from services.mappls_service import mappls_service
 from services.fare_service import fare_service
+from websocket_manager import connection_manager, NotificationType
 
 router = APIRouter(prefix="/api/rides", tags=["Rides"])
 
@@ -409,6 +410,25 @@ async def accept_ride(
     await db.commit()
     await db.refresh(ride)
     
+    # Send push notification to rider
+    vehicle_info = f"{vehicle.color} {vehicle.make} {vehicle.model} ({vehicle.number_plate})"
+    eta_info = await mappls_service.get_eta(
+        (profile.current_lat or ride.pickup_lat, profile.current_lng or ride.pickup_lng),
+        (ride.pickup_lat, ride.pickup_lng)
+    )
+    eta_mins = eta_info["duration_mins"] if eta_info else 10
+    
+    await connection_manager.notify_ride_accepted(
+        str(ride.rider_id),
+        current_user.name or "Driver",
+        vehicle_info,
+        eta_mins,
+        {"ride_id": str(ride.id), "driver_id": str(current_user.id), "vehicle": vehicle.to_dict()}
+    )
+    
+    # Register ride in connection manager
+    connection_manager.register_ride(str(ride.id), str(ride.rider_id), str(current_user.id))
+    
     return {
         "success": True,
         "message": "Ride accepted!",
@@ -435,6 +455,26 @@ async def driver_arriving(
     ride.status = RideStatus.ARRIVING
     await db.commit()
     
+    # Get driver profile for ETA
+    profile_result = await db.execute(
+        select(DriverProfile).where(DriverProfile.user_id == current_user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    
+    eta_info = await mappls_service.get_eta(
+        (profile.current_lat or ride.pickup_lat, profile.current_lng or ride.pickup_lng),
+        (ride.pickup_lat, ride.pickup_lng)
+    ) if profile else None
+    eta_mins = eta_info["duration_mins"] if eta_info else 5
+    
+    # Send push notification
+    await connection_manager.notify_driver_arriving(
+        str(ride.rider_id),
+        current_user.name or "Driver",
+        eta_mins,
+        {"ride_id": str(ride.id)}
+    )
+    
     return {"success": True, "message": "Status updated to arriving"}
 
 
@@ -456,6 +496,13 @@ async def driver_arrived(
     
     ride.status = RideStatus.ARRIVED
     await db.commit()
+    
+    # Send push notification
+    await connection_manager.notify_driver_arrived(
+        str(ride.rider_id),
+        current_user.name or "Driver",
+        {"ride_id": str(ride.id)}
+    )
     
     return {"success": True, "message": "Status updated to arrived"}
 
@@ -479,6 +526,12 @@ async def start_ride(
     ride.status = RideStatus.IN_PROGRESS
     ride.started_at = datetime.now(timezone.utc)
     await db.commit()
+    
+    # Send push notification
+    await connection_manager.notify_ride_started(
+        str(ride.rider_id),
+        {"ride_id": str(ride.id), "drop_address": ride.drop_address}
+    )
     
     return {"success": True, "message": "Ride started"}
 
@@ -530,6 +583,22 @@ async def complete_ride(
     
     await db.commit()
     
+    # Send push notifications
+    await connection_manager.notify_ride_completed(
+        str(ride.rider_id),
+        ride.actual_fare,
+        {"ride_id": str(ride.id), "fare": ride.actual_fare}
+    )
+    
+    await connection_manager.notify_payment_received(
+        str(current_user.id),
+        ride.actual_fare,
+        {"ride_id": str(ride.id)}
+    )
+    
+    # Complete ride in connection manager
+    connection_manager.complete_ride(str(ride.id))
+    
     return {
         "success": True,
         "message": "Ride completed!",
@@ -577,6 +646,30 @@ async def cancel_ride(
             driver.is_online = True
     
     await db.commit()
+    
+    # Send push notifications
+    reason_text = request.reason or "No reason provided"
+    if is_rider and ride.driver_id:
+        # Notify driver that rider cancelled
+        await connection_manager.notify_ride_cancelled(
+            str(ride.driver_id),
+            "driver",
+            "rider",
+            reason_text,
+            {"ride_id": str(ride.id)}
+        )
+    elif is_driver:
+        # Notify rider that driver cancelled
+        await connection_manager.notify_ride_cancelled(
+            str(ride.rider_id),
+            "rider",
+            "driver",
+            reason_text,
+            {"ride_id": str(ride.id)}
+        )
+    
+    # Complete ride in connection manager
+    connection_manager.complete_ride(str(ride.id))
     
     return {"success": True, "message": "Ride cancelled"}
 

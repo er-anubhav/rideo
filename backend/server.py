@@ -24,7 +24,8 @@ from routers import (
     rides_router,
     ratings_router,
     admin_router,
-    promo_router
+    promo_router,
+    earnings_router
 )
 
 # Configure logging
@@ -100,6 +101,7 @@ app.include_router(rides_router)
 app.include_router(ratings_router)
 app.include_router(admin_router)
 app.include_router(promo_router)
+app.include_router(earnings_router)
 
 
 # Root endpoint

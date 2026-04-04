@@ -7,3 +7,4 @@ from .rides import router as rides_router
 from .ratings import router as ratings_router
 from .admin import router as admin_router
 from .promo import router as promo_router
+from .earnings import router as earnings_router
