@@ -80,7 +80,8 @@ from routers import (
     promo_router,     # /api/promo - Promo code management
     earnings_router,  # /api/earnings - Driver earnings reports
     notifications_router,  # /api/notifications - Notification history
-    support_router    # /api/support - Support tickets and chat
+    support_router,   # /api/support - Support tickets and chat
+    wallet_router     # /api/wallet - Digital wallet
 )
 
 # Configure logging
@@ -183,6 +184,7 @@ app.include_router(promo_router)     # Promo code endpoints
 app.include_router(earnings_router)  # Driver earnings endpoints
 app.include_router(notifications_router)  # Notification endpoints
 app.include_router(support_router)   # Support ticket endpoints
+app.include_router(wallet_router)    # Wallet endpoints
 
 
 # ==================== ROOT ENDPOINTS ====================
