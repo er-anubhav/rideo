@@ -112,6 +112,7 @@ class User(Base):
     # Relationships (lazy loaded)
     driver_profile = relationship("DriverProfile", back_populates="user", uselist=False)
     rider_profile = relationship("RiderProfile", back_populates="user", uselist=False)
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
 
     def to_dict(self):
         """

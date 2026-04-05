@@ -78,7 +78,8 @@ from routers import (
     ratings_router,   # /api/ratings - User ratings
     admin_router,     # /api/admin - Admin dashboard and management
     promo_router,     # /api/promo - Promo code management
-    earnings_router   # /api/earnings - Driver earnings reports
+    earnings_router,  # /api/earnings - Driver earnings reports
+    notifications_router  # /api/notifications - Notification history
 )
 
 # Configure logging
@@ -179,6 +180,7 @@ app.include_router(ratings_router)   # Rating endpoints
 app.include_router(admin_router)     # Admin dashboard endpoints
 app.include_router(promo_router)     # Promo code endpoints
 app.include_router(earnings_router)  # Driver earnings endpoints
+app.include_router(notifications_router)  # Notification endpoints
 
 
 # ==================== ROOT ENDPOINTS ====================

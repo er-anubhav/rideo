@@ -4,6 +4,7 @@ from typing import Dict, Set, List, Optional
 from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime, timezone
 from enum import Enum
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
@@ -187,10 +188,28 @@ class ConnectionManager:
         notification_type: NotificationType,
         title: str,
         message: str,
-        data: Optional[dict] = None
+        data: Optional[dict] = None,
+        db: Optional[AsyncSession] = None
     ):
-        """Send push notification to rider"""
+        """Send push notification to rider and save to database"""
         notification = self._create_notification(notification_type, title, message, data)
+        
+        # Save to database if session provided
+        if db:
+            from models.notification import Notification
+            db_notification = Notification(
+                user_id=rider_id,
+                title=title,
+                body=message,
+                type=notification_type.value,
+                data=data
+            )
+            db.add(db_notification)
+            try:
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to save notification to database: {e}")
+                await db.rollback()
         
         if rider_id in self.rider_connections:
             try:
@@ -210,10 +229,28 @@ class ConnectionManager:
         notification_type: NotificationType,
         title: str,
         message: str,
-        data: Optional[dict] = None
+        data: Optional[dict] = None,
+        db: Optional[AsyncSession] = None
     ):
-        """Send push notification to driver"""
+        """Send push notification to driver and save to database"""
         notification = self._create_notification(notification_type, title, message, data)
+        
+        # Save to database if session provided
+        if db:
+            from models.notification import Notification
+            db_notification = Notification(
+                user_id=driver_id,
+                title=title,
+                body=message,
+                type=notification_type.value,
+                data=data
+            )
+            db.add(db_notification)
+            try:
+                await db.commit()
+            except Exception as e:
+                logger.error(f"Failed to save notification to database: {e}")
+                await db.rollback()
         
         if driver_id in self.driver_connections:
             try:
