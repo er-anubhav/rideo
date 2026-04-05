@@ -76,7 +76,6 @@ from routers import (
     maps_router,      # /api/maps - Mappls geocoding and routing
     rides_router,     # /api/rides - Ride booking and lifecycle
     ratings_router,   # /api/ratings - User ratings
-    admin_router,     # /api/admin - Admin dashboard and management
     promo_router,     # /api/promo - Promo code management
     earnings_router,  # /api/earnings - Driver earnings reports
     notifications_router,  # /api/notifications - Notification history
@@ -179,7 +178,6 @@ app.include_router(drivers_router)   # Driver management endpoints
 app.include_router(maps_router)      # Maps and geocoding endpoints
 app.include_router(rides_router)     # Ride booking endpoints
 app.include_router(ratings_router)   # Rating endpoints
-app.include_router(admin_router)     # Admin dashboard endpoints
 app.include_router(promo_router)     # Promo code endpoints
 app.include_router(earnings_router)  # Driver earnings endpoints
 app.include_router(notifications_router)  # Notification endpoints
