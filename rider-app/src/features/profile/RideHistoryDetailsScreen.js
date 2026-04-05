@@ -3,10 +3,11 @@ import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from '@/components/Map';
 import { LinearGradient } from 'expo-linear-gradient';
 import { rideService } from '@/features/booking/rideService';
 import { loggingService } from '@/utils/loggingService';
+import { CONFIG } from '@/config/config';
+import HomeMap from '@/components/HomeMap';
 
 const formatCurrency = (value) => {
     const amount = Number(value || 0);
@@ -77,39 +78,33 @@ const RideHistoryDetailsScreen = ({ route, navigation }) => {
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
                 <View className="h-64 w-full bg-gray-100 relative">
-                    <MapView
-                        provider={PROVIDER_GOOGLE}
+                    <HomeMap
                         style={{ width: '100%', height: '100%' }}
-                        initialRegion={{
+                        region={{
                             latitude: (pickupLat + dropLat) / 2,
                             longitude: (pickupLng + dropLng) / 2,
                             latitudeDelta: Math.max(Math.abs(pickupLat - dropLat) * 1.8, 0.02),
                             longitudeDelta: Math.max(Math.abs(pickupLng - dropLng) * 1.8, 0.02),
                         }}
-                        scrollEnabled={false}
-                        zoomEnabled={false}
-                        rotateEnabled={false}
-                        pitchEnabled={false}
-                    >
-                        <Marker coordinate={{ latitude: pickupLat, longitude: pickupLng }}>
-                            <View className="bg-white p-1 rounded-full shadow-md border border-gray-200">
-                                <View className="h-3 w-3 bg-green-500 rounded-full" />
-                            </View>
-                        </Marker>
-                        <Marker coordinate={{ latitude: dropLat, longitude: dropLng }}>
-                            <View className="bg-white p-1 rounded-full shadow-md border border-gray-200">
-                                <View className="h-3 w-3 bg-red-500 rounded-sm" />
-                            </View>
-                        </Marker>
-                        <Polyline
-                            coordinates={[
-                                { latitude: pickupLat, longitude: pickupLng },
-                                { latitude: dropLat, longitude: dropLng },
-                            ]}
-                            strokeColor="#9333EA"
-                            strokeWidth={3}
-                        />
-                    </MapView>
+                        interactive={false}
+                        location={{
+                            coords: {
+                                latitude: pickupLat,
+                                longitude: pickupLng,
+                            },
+                        }}
+                        destination={{
+                            lat: dropLat,
+                            lon: dropLng,
+                            name: 'Destination',
+                        }}
+                        routeCoordinates={[
+                            { latitude: pickupLat, longitude: pickupLng },
+                            { latitude: dropLat, longitude: dropLng },
+                        ]}
+                        tileUrlTemplate={CONFIG.MAP_TILE_URL_TEMPLATE}
+                        mapplsRestKey={CONFIG.MAPPLS_REST_KEY}
+                    />
                     <LinearGradient
                         colors={['transparent', 'rgba(255,255,255,1)']}
                         className="absolute bottom-0 left-0 right-0 h-10"

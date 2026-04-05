@@ -7,7 +7,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Animated, Easing, ScrollView, StyleSheet, Switch, TouchableOpacity, View, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { Text } from '@/components/CustomText';
-import Map from '@/components/Map';
+import DriverMap from '@/components/DriverMap';
 import RideRequestPanel from '@/features/ride/components/RideRequestPanel';
 import { driverService, DriverProfile, DriverStats } from '@/features/dashboard/driver.service';
 import { rideService, Ride } from '@/features/ride/ride.service';
@@ -17,6 +17,7 @@ import { userStorage } from '@/utils/storage';
 import { appLogger } from '@/utils/app-logger';
 import PermissionModal from '@/components/PermissionModal';
 import { locationPulseService } from '@/api/location-pulse.service';
+import { MAP_TILE_URL_TEMPLATE } from '@/constants/api';
 
 const DashboardScreen = () => {
     const router = useRouter();
@@ -448,7 +449,7 @@ const DashboardScreen = () => {
                     <Text style={styles.sectionTitle}>Live Insights</Text>
                     <View style={styles.mapContainer}>
                         {location ? (
-                            <Map
+                            <DriverMap
                                 style={styles.map}
                                 region={{
                                     latitude: location.coords.latitude,
@@ -456,13 +457,10 @@ const DashboardScreen = () => {
                                     latitudeDelta: 0.01,
                                     longitudeDelta: 0.01,
                                 }}
-                                showsUserLocation={true}
-                                showsMyLocationButton={false}
-                                showsCompass={false}
-                                scrollEnabled={false}
-                                zoomEnabled={false}
-                                pitchEnabled={false}
-                                rotateEnabled={false}
+                                location={location}
+                                tileUrlTemplate={MAP_TILE_URL_TEMPLATE}
+                                mapplsRestKey={process.env.EXPO_PUBLIC_MAPPLS_REST_KEY}
+                                interactive={false}
                             />
                         ) : (
                             <View style={styles.mapPlaceholder}>

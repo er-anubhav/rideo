@@ -142,7 +142,7 @@ backend                          RUNNING   pid 12345, uptime 0:00:30
 cd /app/backend
 
 # Activate virtual environment (if using)
-source venv/bin/activate
+source /home/anubhavtripathi/Documents/Projects/new_rideo/backend/.venv/bin/activate
 
 # Start server
 uvicorn server:app --host 0.0.0.0 --port 8001 --reload

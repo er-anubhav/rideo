@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Search, Ban, Trash2, Eye } from 'lucide-react';
+import { Search, Ban, Trash2 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { formatDate } from '../utils/helpers';
+
+const roleTone = {
+  admin: 'status-pill status-pill-strong',
+  driver: 'status-pill',
+  rider: 'status-pill status-pill-soft',
+};
 
 const Users = () => {
   const [users, setUsers] = useState([]);
@@ -21,7 +27,7 @@ const Users = () => {
       const params = { page, limit: 20 };
       if (roleFilter) params.role = roleFilter;
       if (search) params.search = search;
-      
+
       const response = await adminService.getUsers(params);
       setUsers(response.data.users);
       setTotal(response.data.total);
@@ -38,7 +44,7 @@ const Users = () => {
   };
 
   const handleBlockUser = async (userId) => {
-    if (!confirm('Are you sure you want to block/unblock this user?')) return;
+    if (!confirm('Are you sure you want to block or unblock this user?')) return;
     try {
       await adminService.blockUser(userId);
       loadUsers();
@@ -58,35 +64,33 @@ const Users = () => {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Users Management</h1>
+    <div className="page-shell">
+      <div className="page-heading">
+        <div>
+          <span className="page-kicker">Accounts</span>
+          <h1 className="page-title">
+            User <span className="display-accent">management</span>
+          </h1>
+          <p className="page-subtitle">Search, segment, and moderate every account from one structured review surface.</p>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex">
+      <div className="filter-shell">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_260px]">
+          <div className="input-combo">
             <input
               type="text"
-              placeholder="Search by name, phone, email..."
+              placeholder="Search by name, phone, or email"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+              className="form-control"
             />
-            <button
-              onClick={handleSearch}
-              className="bg-blue-600 text-white px-4 py-2 rounded-r-lg hover:bg-blue-700"
-            >
-              <Search className="w-5 h-5" />
+            <button onClick={handleSearch} className="button-primary" aria-label="Search users">
+              <Search className="h-5 w-5" />
             </button>
           </div>
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
+          <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="form-control">
             <option value="">All Roles</option>
             <option value="rider">Riders</option>
             <option value="driver">Drivers</option>
@@ -95,101 +99,87 @@ const Users = () => {
         </div>
       </div>
 
-      {/* Users Table */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Joined</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading ? (
+      <div className="table-shell">
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                  Loading users...
-                </td>
+                <th>User</th>
+                <th>Phone</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th>Actions</th>
               </tr>
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                  No users found
-                </td>
-              </tr>
-            ) : (
-              users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="font-medium text-gray-900">{user.name}</div>
-                    <div className="text-sm text-gray-500">{user.email || 'No email'}</div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{user.phone}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.role === 'admin' ? 'bg-purple-100 text-purple-800' :
-                      user.role === 'driver' ? 'bg-blue-100 text-blue-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {user.is_active ? 'Active' : 'Blocked'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-500">
-                    {formatDate(user.created_at)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleBlockUser(user.id)}
-                        className="text-yellow-600 hover:text-yellow-800"
-                        title={user.is_active ? 'Block User' : 'Unblock User'}
-                      >
-                        <Ban className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600 hover:text-red-800"
-                        title="Delete User"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="empty-state">
+                    Loading users...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan="6" className="empty-state">
+                    No users found
+                  </td>
+                </tr>
+              ) : (
+                users.map((user) => (
+                  <tr key={user.id}>
+                    <td>
+                      <div className="font-semibold text-black">{user.name}</div>
+                      <div className="table-note mt-1">{user.email || 'No email'}</div>
+                    </td>
+                    <td className="muted-number">{user.phone}</td>
+                    <td>
+                      <span className={roleTone[user.role] || 'status-pill status-pill-muted'}>{user.role}</span>
+                    </td>
+                    <td>
+                      <span className={user.is_active ? 'status-pill status-pill-strong' : 'status-pill status-pill-muted'}>
+                        {user.is_active ? 'Active' : 'Blocked'}
+                      </span>
+                    </td>
+                    <td className="table-note">{formatDate(user.created_at)}</td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleBlockUser(user.id)}
+                          className="button-icon"
+                          title={user.is_active ? 'Block User' : 'Unblock User'}
+                        >
+                          <Ban className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteUser(user.id)}
+                          className="button-icon button-icon-danger"
+                          title="Delete User"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Pagination */}
       {total > 20 && (
-        <div className="flex justify-center mt-6 gap-2">
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
+        <div className="pagination-shell">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="button-secondary">
             Previous
           </button>
-          <span className="px-4 py-2">
+          <span className="table-note">
             Page {page} of {Math.ceil(total / 20)}
           </span>
           <button
             onClick={() => setPage(page + 1)}
             disabled={page >= Math.ceil(total / 20)}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+            className="button-secondary"
           >
             Next
           </button>

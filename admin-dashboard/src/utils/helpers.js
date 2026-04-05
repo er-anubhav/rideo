@@ -13,14 +13,14 @@ export const formatCurrency = (amount) => {
 
 export const getStatusColor = (status) => {
   const colors = {
-    completed: 'bg-green-100 text-green-800',
-    active: 'bg-blue-100 text-blue-800',
-    pending: 'bg-yellow-100 text-yellow-800',
-    cancelled: 'bg-red-100 text-red-800',
-    open: 'bg-blue-100 text-blue-800',
-    in_progress: 'bg-yellow-100 text-yellow-800',
-    resolved: 'bg-green-100 text-green-800',
-    closed: 'bg-gray-100 text-gray-800',
+    completed: 'status-pill status-pill-strong',
+    active: 'status-pill',
+    pending: 'status-pill status-pill-soft',
+    cancelled: 'status-pill status-pill-muted',
+    open: 'status-pill',
+    in_progress: 'status-pill status-pill-soft',
+    resolved: 'status-pill status-pill-strong',
+    closed: 'status-pill status-pill-muted',
   };
-  return colors[status] || 'bg-gray-100 text-gray-800';
+  return colors[status] || 'status-pill status-pill-muted';
 };

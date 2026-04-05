@@ -18,9 +18,9 @@ const PrivateRoute = ({ children }) => {
 
 const Layout = ({ children }) => {
   return (
-    <div className="flex">
+    <div className="dashboard-main">
       <Sidebar />
-      <div className="ml-64 flex-1 bg-gray-100 min-h-screen p-8">
+      <div className="content-shell">
         {children}
       </div>
     </div>

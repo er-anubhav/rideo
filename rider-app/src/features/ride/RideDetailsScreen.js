@@ -3,9 +3,9 @@ import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
-import MapView, { Marker, Polyline, UrlTile } from '@/components/Map';
 import { rideService } from '@/features/booking/rideService';
 import { CONFIG } from '@/config/config';
+import HomeMap from '@/components/HomeMap';
 
 
 const ServiceOption = ({ id, title, subtitle, time, dropTime, price, originalPrice, selected, onSelect }) => (
@@ -168,56 +168,25 @@ const RideDetailsScreen = ({ navigation, route }) => {
             {/* Map Container - 60% of screen */}
             <View className="absolute top-0 left-0 right-0" style={{ height: '70%' }}>
                 {mapRegion ? (
-                    <MapView
+                    <HomeMap
                         style={{ width: '100%', height: '100%' }}
                         region={mapRegion}
-                        onRegionChangeComplete={(region) => setMapRegion(region)}
-                        showsUserLocation={false}
-                        showsMyLocationButton={false}
-                    >
-                        {/* Pickup Marker - Green Pin */}
-                        <Marker
-                            coordinate={{
+                        interactive
+                        location={{
+                            coords: {
                                 latitude: pickupData.lat,
                                 longitude: pickupData.lon,
-                            }}
-                            title="Pickup Location"
-                            description={pickupData.address}
-                        >
-                            <View className="items-center">
-                                <View className="bg-green-500 w-8 h-8 rounded-full items-center justify-center border-2 border-white shadow-lg">
-                                    <View className="w-3 h-3 bg-white rounded-full" />
-                                </View>
-                                <View className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-green-500" style={{ marginTop: -2 }} />
-                            </View>
-                        </Marker>
-
-                        {/* Destination Marker - Red Pin */}
-                        <Marker
-                            coordinate={{
-                                latitude: dropData.lat,
-                                longitude: dropData.lon,
-                            }}
-                            title="Destination"
-                            description={dropData.address}
-                        >
-                            <View className="items-center">
-                                <View className="bg-red-500 w-8 h-8 rounded-full items-center justify-center border-2 border-white shadow-lg">
-                                    <View className="w-3 h-3 bg-white rounded-full" />
-                                </View>
-                                <View className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-red-500" style={{ marginTop: -2 }} />
-                            </View>
-                        </Marker>
-
-                        {/* Route Polyline - Actual Road Route */}
-                        {routeCoordinates.length > 0 && (
-                            <Polyline
-                                coordinates={routeCoordinates}
-                                strokeColor="#9333EA"
-                                strokeWidth={2}
-                            />
-                        )}
-                    </MapView>
+                            },
+                        }}
+                        destination={{
+                            lat: dropData.lat,
+                            lon: dropData.lon,
+                            name: dropData.address,
+                        }}
+                        routeCoordinates={routeCoordinates}
+                        tileUrlTemplate={CONFIG.MAP_TILE_URL_TEMPLATE}
+                        mapplsRestKey={CONFIG.MAPPLS_REST_KEY}
+                    />
                 ) : (
                     <View className="w-full h-full items-center justify-center bg-slate-100">
                         <ActivityIndicator size="large" color="#7E22CE" />

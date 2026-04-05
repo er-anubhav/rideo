@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
+import { CONFIG } from '@/config/config';
 
 /**
  * Web Map component powered by Leaflet + OpenStreetMap.
@@ -10,7 +11,6 @@ import { View, StyleSheet } from 'react-native';
 export const Marker = ({ children }) => (children ? <>{children}</> : null);
 export const Polyline = () => null;
 export const UrlTile = () => null;
-export const PROVIDER_GOOGLE = null;
 
 let leafletLoadPromise = null;
 
@@ -75,7 +75,7 @@ const Map = React.forwardRef(({
                     attributionControl: false,
                 }).setView([lat, lng], 14);
 
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                L.tileLayer(CONFIG.MAP_TILE_URL_TEMPLATE, {
                     maxZoom: 19,
                 }).addTo(mapInstanceRef.current);
             } else {

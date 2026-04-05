@@ -39,7 +39,7 @@ const Wallet = () => {
     try {
       const params = { page, limit: 50 };
       if (transactionType) params.transaction_type = transactionType;
-      
+
       const response = await adminService.getTransactions(params);
       setTransactions(response.data.transactions);
       setTotal(response.data.total);
@@ -50,120 +50,115 @@ const Wallet = () => {
     }
   };
 
-  const totalBalance = wallets.reduce((sum, w) => sum + (w.balance || 0), 0);
+  const totalBalance = wallets.reduce((sum, wallet) => sum + (wallet.balance || 0), 0);
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Wallet Management</h1>
+    <div className="page-shell">
+      <div className="page-heading">
+        <div>
+          <span className="page-kicker">Finance</span>
+          <h1 className="page-title">
+            Wallet <span className="display-accent">management</span>
+          </h1>
+          <p className="page-subtitle">Switch cleanly between stored balances and transaction history without changing the visual rhythm.</p>
+        </div>
+      </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="metric-card">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-600">Total Wallets</p>
-              <h3 className="text-2xl font-bold mt-1">{total}</h3>
+              <p className="metric-label">Total Wallets</p>
+              <h3 className="metric-value">{total}</h3>
             </div>
-            <div className="bg-blue-100 p-3 rounded-full">
-              <WalletIcon className="w-6 h-6 text-blue-600" />
+            <div className="metric-icon">
+              <WalletIcon className="h-6 w-6" />
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
+        <div className="metric-card metric-card-dark">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-600">Total Balance</p>
-              <h3 className="text-2xl font-bold mt-1">{formatCurrency(totalBalance)}</h3>
+              <p className="metric-label">Total Balance</p>
+              <h3 className="metric-value">{formatCurrency(totalBalance)}</h3>
             </div>
-            <div className="bg-green-100 p-3 rounded-full">
-              <TrendingUp className="w-6 h-6 text-green-600" />
+            <div className="metric-icon">
+              <TrendingUp className="h-6 w-6" />
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between">
+        <div className="metric-card">
+          <div className="flex items-center justify-between gap-4">
             <div>
-              <p className="text-sm text-gray-600">Transactions</p>
-              <h3 className="text-2xl font-bold mt-1">{activeTab === 'transactions' ? total : '-'}</h3>
+              <p className="metric-label">Transactions</p>
+              <h3 className="metric-value">{activeTab === 'transactions' ? total : '-'}</h3>
             </div>
-            <div className="bg-purple-100 p-3 rounded-full">
-              <TrendingDown className="w-6 h-6 text-purple-600" />
+            <div className="metric-icon">
+              <TrendingDown className="h-6 w-6" />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-lg shadow-md mb-6">
-        <div className="border-b border-gray-200">
-          <div className="flex">
-            <button
-              onClick={() => { setActiveTab('wallets'); setPage(1); }}
-              className={`px-6 py-3 font-medium ${
-                activeTab === 'wallets'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              User Wallets
-            </button>
-            <button
-              onClick={() => { setActiveTab('transactions'); setPage(1); }}
-              className={`px-6 py-3 font-medium ${
-                activeTab === 'transactions'
-                  ? 'border-b-2 border-blue-500 text-blue-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              All Transactions
-            </button>
-          </div>
+      <div className="tab-shell">
+        <div className="tab-header">
+          <button
+            onClick={() => {
+              setActiveTab('wallets');
+              setPage(1);
+            }}
+            className={`tab-button ${activeTab === 'wallets' ? 'tab-button-active' : ''}`}
+          >
+            User Wallets
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('transactions');
+              setPage(1);
+            }}
+            className={`tab-button ${activeTab === 'transactions' ? 'tab-button-active' : ''}`}
+          >
+            All Transactions
+          </button>
         </div>
 
-        {/* Wallets Tab */}
         {activeTab === 'wallets' && (
-          <div className="p-6">
-            <table className="w-full">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto p-2">
+            <table className="data-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Updated</th>
+                  <th>User</th>
+                  <th>Phone</th>
+                  <th>Balance</th>
+                  <th>Status</th>
+                  <th>Last Updated</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan="5" className="empty-state">
                       Loading wallets...
                     </td>
                   </tr>
                 ) : wallets.length === 0 ? (
                   <tr>
-                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                    <td colSpan="5" className="empty-state">
                       No wallets found
                     </td>
                   </tr>
                 ) : (
                   wallets.map((wallet) => (
-                    <tr key={wallet.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 font-medium text-gray-900">{wallet.user?.name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{wallet.user?.phone}</td>
-                      <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-                        {formatCurrency(wallet.balance)}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          wallet.isActive === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                    <tr key={wallet.id}>
+                      <td className="font-semibold text-black">{wallet.user?.name}</td>
+                      <td className="muted-number">{wallet.user?.phone}</td>
+                      <td className="font-semibold">{formatCurrency(wallet.balance)}</td>
+                      <td>
+                        <span className={wallet.isActive === 'active' ? 'status-pill status-pill-strong' : 'status-pill status-pill-muted'}>
                           {wallet.isActive}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">
-                        {formatDate(wallet.updatedAt)}
-                      </td>
+                      <td className="table-note">{formatDate(wallet.updatedAt)}</td>
                     </tr>
                   ))
                 )}
@@ -172,15 +167,10 @@ const Wallet = () => {
           </div>
         )}
 
-        {/* Transactions Tab */}
         {activeTab === 'transactions' && (
           <div>
-            <div className="p-4 border-b">
-              <select
-                value={transactionType}
-                onChange={(e) => setTransactionType(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+            <div className="border-b border-black/10 p-4">
+              <select value={transactionType} onChange={(e) => setTransactionType(e.target.value)} className="form-control max-w-xs">
                 <option value="">All Types</option>
                 <option value="credit">Credit</option>
                 <option value="debit">Debit</option>
@@ -188,64 +178,47 @@ const Wallet = () => {
                 <option value="ride_payment">Ride Payment</option>
               </select>
             </div>
-            <div className="p-6">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+            <div className="overflow-x-auto p-2">
+              <table className="data-table">
+                <thead>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transaction ID</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Balance After</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th>Transaction ID</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Balance After</th>
+                    <th>Description</th>
+                    <th>Date</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody>
                   {loading ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="6" className="empty-state">
                         Loading transactions...
                       </td>
                     </tr>
                   ) : transactions.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan="6" className="empty-state">
                         No transactions found
                       </td>
                     </tr>
                   ) : (
                     transactions.map((txn) => (
-                      <tr key={txn.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 text-sm font-mono text-gray-900">
-                          {txn.id.substring(0, 8)}...
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            txn.transactionType === 'credit' ? 'bg-green-100 text-green-800' :
-                            txn.transactionType === 'debit' ? 'bg-red-100 text-red-800' :
-                            txn.transactionType === 'refund' ? 'bg-blue-100 text-blue-800' :
-                            'bg-purple-100 text-purple-800'
-                          }`}>
+                      <tr key={txn.id}>
+                        <td className="font-mono text-sm">{txn.id.substring(0, 8)}...</td>
+                        <td>
+                          <span className={txn.transactionType === 'credit' ? 'status-pill status-pill-strong' : 'status-pill'}>
                             {txn.transactionType}
                           </span>
                         </td>
-                        <td className={`px-6 py-4 text-sm font-semibold ${
-                          txn.transactionType === 'credit' || txn.transactionType === 'refund'
-                            ? 'text-green-600'
-                            : 'text-red-600'
-                        }`}>
+                        <td className="font-semibold">
                           {txn.transactionType === 'credit' || txn.transactionType === 'refund' ? '+' : '-'}
                           {formatCurrency(txn.amount)}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-900">
-                          {formatCurrency(txn.balanceAfter)}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-600">
-                          {txn.description}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
-                          {formatDate(txn.createdAt)}
-                        </td>
+                        <td>{formatCurrency(txn.balanceAfter)}</td>
+                        <td className="table-note">{txn.description}</td>
+                        <td className="table-note">{formatDate(txn.createdAt)}</td>
                       </tr>
                     ))
                   )}
@@ -256,23 +229,18 @@ const Wallet = () => {
         )}
       </div>
 
-      {/* Pagination */}
       {total > (activeTab === 'wallets' ? 20 : 50) && (
-        <div className="flex justify-center mt-6 gap-2">
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-          >
+        <div className="pagination-shell">
+          <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="button-secondary">
             Previous
           </button>
-          <span className="px-4 py-2">
+          <span className="table-note">
             Page {page} of {Math.ceil(total / (activeTab === 'wallets' ? 20 : 50))}
           </span>
           <button
             onClick={() => setPage(page + 1)}
             disabled={page >= Math.ceil(total / (activeTab === 'wallets' ? 20 : 50))}
-            className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
+            className="button-secondary"
           >
             Next
           </button>

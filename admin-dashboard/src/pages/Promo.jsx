@@ -36,7 +36,7 @@ const Promo = () => {
 
   const handleCreatePromo = async (e) => {
     e.preventDefault();
-    
+
     try {
       await adminService.createPromoCode(formData);
       setShowCreateForm(false);
@@ -57,128 +57,126 @@ const Promo = () => {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Promo Code Management</h1>
-        <button
-          onClick={() => setShowCreateForm(!showCreateForm)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Create Promo Code
+    <div className="page-shell">
+      <div className="page-heading">
+        <div>
+          <span className="page-kicker">Growth</span>
+          <h1 className="page-title">
+            Promo <span className="display-accent">codes</span>
+          </h1>
+          <p className="page-subtitle">Campaign creation now shares the same layout rhythm, form system, and table treatment as the rest of the dashboard.</p>
+        </div>
+        <button onClick={() => setShowCreateForm(!showCreateForm)} className="button-primary">
+          <Plus className="h-5 w-5" />
+          {showCreateForm ? 'Hide Form' : 'Create Promo Code'}
         </button>
       </div>
 
-      {/* Create Form */}
       {showCreateForm && (
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-xl font-bold mb-4">Create New Promo Code</h2>
-          <form onSubmit={handleCreatePromo}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Code *</label>
+        <div className="surface-card-strong">
+          <div className="page-heading mb-6">
+            <div>
+              <span className="page-kicker">New Campaign</span>
+              <h2 className="text-2xl font-extrabold tracking-tight">Create promo code</h2>
+            </div>
+          </div>
+          <form onSubmit={handleCreatePromo} className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="input-shell">
+                <label className="field-label">Code *</label>
                 <input
                   type="text"
                   value={formData.code}
-                  onChange={(e) => setFormData({...formData, code: e.target.value.toUpperCase()})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                  className="form-control"
                   placeholder="SUMMER50"
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Discount Type *</label>
+              <div className="input-shell">
+                <label className="field-label">Discount Type *</label>
                 <select
                   value={formData.discountType}
-                  onChange={(e) => setFormData({...formData, discountType: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
+                  className="form-control"
                   required
                 >
                   <option value="percent">Percentage</option>
                   <option value="flat">Flat Amount</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Discount Value * ({formData.discountType === 'percent' ? '%' : '₹'})
-                </label>
+              <div className="input-shell">
+                <label className="field-label">Discount Value *</label>
                 <input
                   type="number"
                   value={formData.discountValue}
-                  onChange={(e) => setFormData({...formData, discountValue: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
+                  className="form-control"
                   placeholder={formData.discountType === 'percent' ? '50' : '100'}
                   required
                   min="0"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Max Discount (₹)</label>
+              <div className="input-shell">
+                <label className="field-label">Max Discount</label>
                 <input
                   type="number"
                   value={formData.maxDiscount}
-                  onChange={(e) => setFormData({...formData, maxDiscount: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
+                  className="form-control"
                   placeholder="100"
                   min="0"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Min Ride Amount (₹)</label>
+              <div className="input-shell">
+                <label className="field-label">Minimum Ride Amount</label>
                 <input
                   type="number"
                   value={formData.minRideAmount}
-                  onChange={(e) => setFormData({...formData, minRideAmount: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, minRideAmount: e.target.value })}
+                  className="form-control"
                   placeholder="200"
                   min="0"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Max Total Uses</label>
+              <div className="input-shell">
+                <label className="field-label">Max Total Uses</label>
                 <input
                   type="number"
                   value={formData.maxUses}
-                  onChange={(e) => setFormData({...formData, maxUses: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, maxUses: e.target.value })}
+                  className="form-control"
                   placeholder="1000"
                   min="0"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Max Uses Per User *</label>
+              <div className="input-shell">
+                <label className="field-label">Max Uses Per User *</label>
                 <input
                   type="number"
                   value={formData.maxUsesPerUser}
-                  onChange={(e) => setFormData({...formData, maxUsesPerUser: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, maxUsesPerUser: e.target.value })}
+                  className="form-control"
                   placeholder="1"
                   required
                   min="1"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Valid Until</label>
+              <div className="input-shell">
+                <label className="field-label">Valid Until</label>
                 <input
                   type="date"
                   value={formData.validUntil}
-                  onChange={(e) => setFormData({...formData, validUntil: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
+                  className="form-control"
                 />
               </div>
             </div>
-            <div className="flex gap-3 mt-6">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-              >
+            <div className="flex flex-wrap gap-3">
+              <button type="submit" className="button-primary">
                 Create Promo Code
               </button>
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300"
-              >
+              <button type="button" onClick={() => setShowCreateForm(false)} className="button-secondary">
                 Cancel
               </button>
             </div>
@@ -186,67 +184,60 @@ const Promo = () => {
         </div>
       )}
 
-      {/* Promo Codes List */}
-      <div className="bg-white rounded-lg shadow-md overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Discount</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usage</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valid Until</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {loading ? (
+      <div className="table-shell">
+        <div className="overflow-x-auto">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                  Loading promo codes...
-                </td>
+                <th>Code</th>
+                <th>Discount</th>
+                <th>Usage</th>
+                <th>Valid Until</th>
+                <th>Status</th>
               </tr>
-            ) : promoCodes.length === 0 ? (
-              <tr>
-                <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                  No promo codes found. Create one to get started!
-                </td>
-              </tr>
-            ) : (
-              promoCodes.map((promo) => (
-                <tr key={promo.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Ticket className="w-4 h-4 text-blue-600" />
-                      <span className="font-bold text-gray-900">{promo.code}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {promo.discount_type === 'percent' 
-                      ? `${promo.discount_value}%` 
-                      : formatCurrency(promo.discount_value)}
-                    {promo.max_discount && ` (max ${formatCurrency(promo.max_discount)})`}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {promo.current_uses || 0} / {promo.max_uses || '∞'}
-                    <div className="text-xs text-gray-500">
-                      {promo.max_uses_per_user} per user
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {promo.valid_until ? formatDate(promo.valid_until) : 'No expiry'}
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      promo.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {promo.is_active ? 'Active' : 'Inactive'}
-                    </span>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="empty-state">
+                    Loading promo codes...
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : promoCodes.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="empty-state">
+                    No promo codes found. Create one to get started.
+                  </td>
+                </tr>
+              ) : (
+                promoCodes.map((promo) => (
+                  <tr key={promo.id}>
+                    <td>
+                      <div className="flex items-center gap-2 font-semibold text-black">
+                        <Ticket className="h-4 w-4" />
+                        <span>{promo.code}</span>
+                      </div>
+                    </td>
+                    <td>
+                      {promo.discount_type === 'percent' ? `${promo.discount_value}%` : formatCurrency(promo.discount_value)}
+                      {promo.max_discount && <div className="table-note mt-1">max {formatCurrency(promo.max_discount)}</div>}
+                    </td>
+                    <td>
+                      {promo.current_uses || 0} / {promo.max_uses || '∞'}
+                      <div className="table-note mt-1">{promo.max_uses_per_user} per user</div>
+                    </td>
+                    <td>{promo.valid_until ? formatDate(promo.valid_until) : 'No expiry'}</td>
+                    <td>
+                      <span className={promo.is_active ? 'status-pill status-pill-strong' : 'status-pill status-pill-muted'}>
+                        {promo.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

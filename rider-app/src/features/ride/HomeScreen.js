@@ -1,18 +1,25 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MapView, { Marker, Polyline } from '@/components/Map';
 import * as Location from 'expo-location';
 import { rideService } from '@/features/booking/rideService';
 import { walletService } from '@/features/wallet/walletService';
 import { realtimeService } from '@/features/ride/realtime.service';
 import { geocodingService } from '@/features/booking/geocodingService';
+import { CONFIG } from '@/config/config';
+import HomeMap from '@/components/HomeMap';
 
 const ACTIVE_RIDE_STATUSES = ['REQUESTED', 'MATCHED', 'ACCEPTED', 'DRIVER_ARRIVED', 'IN_PROGRESS'];
 const SEARCHING_RIDE_STATUSES = ['REQUESTED', 'MATCHED'];
+const DEFAULT_MAP_REGION = {
+    latitude: 12.9716,
+    longitude: 77.5946,
+    latitudeDelta: 0.02,
+    longitudeDelta: 0.02,
+};
 
 const toNumberOrUndefined = (value) => {
     const parsed = Number(value);
@@ -24,7 +31,7 @@ const HomeScreen = ({ navigation, route }) => {
     const [location, setLocation] = useState(route.params?.initialLocation || null);
     const [address, setAddress] = useState("Locating...");
     const [destination, setDestination] = useState(null);
-    const [mapRegion, setMapRegion] = useState(route.params?.mapRegion || null);
+    const [mapRegion, setMapRegion] = useState(route.params?.mapRegion || DEFAULT_MAP_REGION);
     const [walletBalance, setWalletBalance] = useState('0.00');
     const [recentDestinations, setRecentDestinations] = useState([]);
     const hasAutoNavigatedToRide = useRef(false);
@@ -180,6 +187,7 @@ const HomeScreen = ({ navigation, route }) => {
             const { status } = await Location.requestForegroundPermissionsAsync();
             if (status !== 'granted') {
                 setAddress("Location Denied");
+                setMapRegion((current) => current || DEFAULT_MAP_REGION);
                 return;
             }
 
@@ -209,6 +217,7 @@ const HomeScreen = ({ navigation, route }) => {
                 }
             } catch {
                 setAddress("Location Unavailable");
+                setMapRegion((current) => current || DEFAULT_MAP_REGION);
             }
         })();
     }, [location, route.params?.locationError]);
@@ -219,59 +228,14 @@ const HomeScreen = ({ navigation, route }) => {
 
             {/* Full Screen Map Background */}
             <View className="absolute inset-0">
-                {mapRegion ? (
-                    <MapView
-                        style={{ width: '100%', height: '100%' }}
-                        region={mapRegion}
-                        onRegionChangeComplete={(region) => setMapRegion(region)}
-                        showsUserLocation={true}
-                        followsUserLocation={true}
-                        showsMyLocationButton={false}
-                        className="w-full h-full"
-                    >
-
-                        {/* Destination Marker */}
-                        {destination && (
-                            <Marker
-                                coordinate={{
-                                    latitude: destination.lat,
-                                    longitude: destination.lon,
-                                }}
-                                title="Destination"
-                                description={destination.name}
-                                pinColor="red"
-                            />
-                        )}
-
-                        {/* Route Polyline */}
-                        {location && destination && (
-                            <Polyline
-                                coordinates={[
-                                    {
-                                        latitude: location.coords.latitude,
-                                        longitude: location.coords.longitude,
-                                    },
-                                    {
-                                        latitude: destination.lat,
-                                        longitude: destination.lon,
-                                    },
-                                ]}
-                                strokeColor="#9333EA"
-                                strokeWidth={4}
-                            />
-                        )}
-                    </MapView>
-                ) : (
-                    <View className="w-full h-full items-center justify-center bg-slate-100">
-                        {/* Fallback Image while loading or if permission denied */}
-                        <Image
-                            source={{ uri: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAQzyybfeFi7vTjH93Xf1jbUG2kbjVSdrblaiE9Pdtu4kwwwVnS3h9EGNqkr6IwAPa5_dRcRCNbBD9YjjWGpmvnqFc8HW8z7Mnbm5spmU73_OeyVUJx8quuQ-AuJcSE2yeAZbAAqeJ0ianAY-V_6265LaajBCtqEgSX5xdO7N3SOiAZcPDy7nHn3Sqgw2jaLti7y9jg7K4J1491mNsYKGTCHQk073I0K_Lge9jY4p52u3_93_zVgxivSDY2fVRPNIE2YAgWjgA6RTM' }}
-                            className="absolute inset-0 w-full h-full opacity-60"
-                            resizeMode="cover"
-                        />
-                        <ActivityIndicator size="large" color="#7E22CE" className="z-10" />
-                    </View>
-                )}
+                <HomeMap
+                    style={{ width: '100%', height: '100%' }}
+                    region={mapRegion}
+                    location={location}
+                    destination={destination}
+                    tileUrlTemplate={CONFIG.MAP_TILE_URL_TEMPLATE}
+                    mapplsRestKey={CONFIG.MAPPLS_REST_KEY}
+                />
             </View>
 
             <SafeAreaView className="flex-1 justify-end pointer-events-box-none">

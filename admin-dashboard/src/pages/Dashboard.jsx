@@ -4,6 +4,12 @@ import StatCard from '../components/StatCard';
 import { adminService } from '../services/api';
 import { formatCurrency } from '../utils/helpers';
 
+const activityTone = {
+  ride: 'status-pill status-pill-strong',
+  registration: 'status-pill',
+  default: 'status-pill status-pill-soft',
+};
+
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [activities, setActivities] = useState([]);
@@ -30,96 +36,106 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-xl text-gray-600">Loading dashboard...</div>
+      <div className="page-shell">
+        <div className="surface-card empty-state">Loading dashboard...</div>
       </div>
     );
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">Dashboard</h1>
+    <div className="page-shell">
+      <div className="page-heading">
+        <div>
+          <span className="page-kicker">Command Center</span>
+          <h1 className="page-title">
+            Platform <span className="display-accent">overview</span>
+          </h1>
+          <p className="page-subtitle">
+            Daily visibility across riders, trips, revenue, and support pressure in one clean operating layer.
+          </p>
+        </div>
+      </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total Users"
           value={stats?.totalUsers || 0}
           icon={Users}
-          color="blue"
-          subtitle={`${stats?.totalDrivers || 0} drivers`}
+          subtitle={`${stats?.totalDrivers || 0} drivers onboarded`}
         />
         <StatCard
           title="Total Rides"
           value={stats?.totalRides || 0}
           icon={MapPin}
-          color="green"
-          subtitle={`${stats?.activeRides || 0} active now`}
+          color="soft"
+          subtitle={`${stats?.activeRides || 0} live right now`}
         />
         <StatCard
           title="Total Revenue"
           value={formatCurrency(stats?.totalRevenue || 0)}
           icon={DollarSign}
-          color="purple"
-          subtitle={`Today: ${formatCurrency(stats?.todayRevenue || 0)}`}
+          color="inverse"
+          subtitle={`Today ${formatCurrency(stats?.todayRevenue || 0)}`}
         />
         <StatCard
           title="Online Drivers"
           value={stats?.onlineDrivers || 0}
           icon={Car}
-          color="indigo"
-          subtitle={`${stats?.completedRides || 0} completed`}
+          subtitle={`${stats?.completedRides || 0} rides completed`}
         />
       </div>
 
-      {/* Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-          <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-yellow-600 mr-2" />
-            <div>
-              <h3 className="font-semibold text-yellow-800">Pending Verifications</h3>
-              <p className="text-yellow-700">{stats?.pendingVerifications || 0} drivers awaiting verification</p>
-            </div>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <div className="alert-card">
+          <div className="alert-icon">
+            <AlertCircle className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-extrabold tracking-tight">Pending Verifications</h3>
+            <p className="page-subtitle mt-2 text-sm">
+              {stats?.pendingVerifications || 0} drivers are waiting for approval and need a final compliance pass.
+            </p>
           </div>
         </div>
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded">
-          <div className="flex items-center">
-            <CheckCircle className="w-5 h-5 text-blue-600 mr-2" />
-            <div>
-              <h3 className="font-semibold text-blue-800">Support Tickets</h3>
-              <p className="text-blue-700">{stats?.openSupportTickets || 0} tickets need attention</p>
-            </div>
+        <div className="alert-card">
+          <div className="alert-icon">
+            <CheckCircle className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-extrabold tracking-tight">Support Queue</h3>
+            <p className="page-subtitle mt-2 text-sm">
+              {stats?.openSupportTickets || 0} tickets still need attention from the operations team.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Recent Activities */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-bold mb-4">Recent Activities</h2>
-        <div className="space-y-3">
+      <div className="surface-card-strong">
+        <div className="page-heading mb-6">
+          <div>
+            <span className="page-kicker">Recent Activity</span>
+            <h2 className="text-2xl font-extrabold tracking-tight">Operational feed</h2>
+          </div>
+        </div>
+
+        <div className="space-y-4">
           {activities.length > 0 ? (
             activities.map((activity, index) => (
-              <div key={index} className="flex items-start border-b pb-3 last:border-b-0">
-                <div className={`p-2 rounded mr-3 ${
-                  activity.type === 'ride' ? 'bg-green-100' :
-                  activity.type === 'registration' ? 'bg-blue-100' :
-                  'bg-yellow-100'
-                }`}>
-                  {activity.type === 'ride' ? <MapPin className="w-4 h-4" /> :
-                   activity.type === 'registration' ? <Users className="w-4 h-4" /> :
-                   <AlertCircle className="w-4 h-4" />}
-                </div>
+              <div
+                key={index}
+                className="flex flex-col gap-3 rounded-2xl border border-black/8 bg-white/80 p-4 md:flex-row md:items-start"
+              >
+                <span className={activityTone[activity.type] || activityTone.default}>
+                  {activity.type === 'ride' ? 'Ride' : activity.type === 'registration' ? 'Signup' : 'Alert'}
+                </span>
                 <div className="flex-1">
-                  <p className="text-sm text-gray-800">{activity.description}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {new Date(activity.timestamp).toLocaleString()}
-                  </p>
+                  <p className="font-semibold text-black/90">{activity.description}</p>
+                  <p className="table-note mt-1">{new Date(activity.timestamp).toLocaleString()}</p>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-gray-500 text-center py-4">No recent activities</p>
+            <div className="empty-state">No recent activities</div>
           )}
         </div>
       </div>

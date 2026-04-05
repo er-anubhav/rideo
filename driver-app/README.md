@@ -74,14 +74,14 @@ Create `.env` from `.env.example` and adjust values for your environment.
   backend WebSocket base URL, for example `ws://localhost:8001/ws`
 - `EXPO_PUBLIC_REQUEST_TIMEOUT_MS`
   REST request timeout in milliseconds
+- `EXPO_PUBLIC_MAP_TILE_URL_TEMPLATE`
+  optional map tile template override for OpenStreetMap-compatible tiles
 - `EXPO_PUBLIC_ENABLE_REMOTE_LOGGING`
   optional logging toggle
 - `EXPO_PUBLIC_ENABLE_DEBUG_LOGS`
   optional verbose logging toggle
 - `EXPO_PUBLIC_ENABLE_REALTIME`
-  preferred realtime toggle
-- `EXPO_PUBLIC_ENABLE_MQTT`
-  legacy alias for `EXPO_PUBLIC_ENABLE_REALTIME`
+  realtime toggle
 
 ## Setup
 

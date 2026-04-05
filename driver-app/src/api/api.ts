@@ -3,6 +3,7 @@ import { API_BASE_URL, REQUEST_TIMEOUT } from '@/constants/api';
 import { clearAllStorage, tokenStorage } from '@/utils/storage';
 import { appLogger } from '@/utils/app-logger';
 import { remoteLogger } from '@/utils/logger';
+import { resolveBackendUrl } from '@/utils/network-config';
 
 import { configService } from './config.service';
 
@@ -14,7 +15,7 @@ const getTrimmedEnv = (value?: string): string | null => {
 
 const envApiBaseUrl = getTrimmedEnv(process.env.EXPO_PUBLIC_API_BASE_URL);
 const localDevApiBaseUrl = __DEV__ && envApiBaseUrl
-    ? envApiBaseUrl.replace(/\/+$/, '')
+    ? resolveBackendUrl(envApiBaseUrl)
     : null;
 
 const getRequestUrl = (config?: AxiosRequestConfig): string | undefined => {
@@ -130,7 +131,11 @@ apiClient.interceptors.response.use(
 export const handleApiError = (error: unknown): string => {
     remoteLogger.logError(error, 'API_ERROR');
     if (axios.isAxiosError(error)) {
-        const message = (error.response?.data as { message?: string | string[] } | undefined)?.message;
+        const responseData = error.response?.data as {
+            message?: string | string[];
+            detail?: string | string[];
+        } | undefined;
+        const message = responseData?.message || responseData?.detail;
 
         if (message) {
             return Array.isArray(message) ? message[0] : message;

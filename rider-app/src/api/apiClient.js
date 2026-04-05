@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
+import { resolveBackendUrl } from '@/utils/networkConfig';
 import { realtimeService } from '@/features/ride/realtime.service';
 import { configService } from './config.service';
 
@@ -12,7 +13,7 @@ const getTrimmedEnv = (value) => {
 
 const envApiBaseUrl = getTrimmedEnv(process.env.EXPO_PUBLIC_API_BASE_URL);
 const localDevApiBaseUrl = __DEV__ && envApiBaseUrl
-    ? envApiBaseUrl.replace(/\/+$/, '')
+    ? resolveBackendUrl(envApiBaseUrl)
     : null;
 
 const getRequestUrl = (config) => {

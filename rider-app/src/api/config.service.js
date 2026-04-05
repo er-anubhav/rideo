@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { resolveBackendUrl } from '@/utils/networkConfig';
 
 const REMOTE_CONFIG_KEY = 'remote_application_config';
 const CONFIG_FETCH_TIMEOUT = 5000; // 5 seconds
@@ -28,8 +29,13 @@ export const configService = {
                 });
 
                 if (response.data && response.data.apiBaseUrl) {
-                    await this.cacheConfig(response.data);
-                    return response.data;
+                    const normalizedConfig = {
+                        ...response.data,
+                        apiBaseUrl: resolveBackendUrl(response.data.apiBaseUrl),
+                        wsBaseUrl: resolveBackendUrl(response.data.wsBaseUrl),
+                    };
+                    await this.cacheConfig(normalizedConfig);
+                    return normalizedConfig;
                 }
                 return null;
             } catch (error) {
@@ -75,11 +81,11 @@ export const configService = {
         if (cached?.apiBaseUrl) {
             // Keep requests fast, then refresh in background.
             void this.fetchRemoteConfig();
-            return cached.apiBaseUrl;
+            return resolveBackendUrl(cached.apiBaseUrl);
         }
 
         const remote = await this.fetchRemoteConfig();
-        return remote?.apiBaseUrl || fallback;
+        return resolveBackendUrl(remote?.apiBaseUrl || fallback);
     },
 
     /**
@@ -87,7 +93,7 @@ export const configService = {
      */
     async getWsBaseUrl(fallback) {
         const cached = await this.getCachedConfig();
-        return cached?.wsBaseUrl || fallback;
+        return resolveBackendUrl(cached?.wsBaseUrl || fallback);
     },
 
     /**

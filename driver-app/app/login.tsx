@@ -33,18 +33,17 @@ const LoginScreen = () => {
     const [otpLoading, setOtpLoading] = useState(false);
 
     const handleGetOTP = async () => {
-        if (!phoneNumber || phoneNumber.length < 10) {
+        if (!phoneNumber || phoneNumber.replace(/\D/g, '').length < 10) {
             Toast.show({ type: 'error', text1: 'Invalid Phone', text2: 'Please enter a valid phone number' });
             return;
         }
 
         setOtpLoading(true);
         try {
-            // Hardcoded OTP: Bypass external service
-            // await authService.requestOTP(phoneNumber);
+            await authService.requestOTP(phoneNumber);
             setOtpSent(true);
             setOtp('123456');
-            Toast.show({ type: 'success', text1: 'Success', text2: 'OTP generated automatically (123456)' });
+            Toast.show({ type: 'success', text1: 'Success', text2: 'OTP sent successfully. Use 123456 in fallback mode.' });
         } catch (error: any) {
             Toast.show({ type: 'error', text1: 'Error', text2: error.message || 'Failed to send OTP' });
         } finally {

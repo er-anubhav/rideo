@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Send } from 'lucide-react';
+import { Send } from 'lucide-react';
 import { adminService } from '../services/api';
 import { formatDate, getStatusColor } from '../utils/helpers';
+
+const priorityTone = {
+  urgent: 'status-pill status-pill-strong',
+  high: 'status-pill',
+  medium: 'status-pill status-pill-soft',
+  low: 'status-pill status-pill-muted',
+};
 
 const Support = () => {
   const [tickets, setTickets] = useState([]);
@@ -23,7 +30,7 @@ const Support = () => {
       const params = { page, limit: 20 };
       if (statusFilter) params.status_filter = statusFilter;
       if (priorityFilter) params.priority = priorityFilter;
-      
+
       const response = await adminService.getTickets(params);
       setTickets(response.data.tickets);
       setTotal(response.data.total);
@@ -45,7 +52,7 @@ const Support = () => {
 
   const handleReply = async () => {
     if (!replyText.trim() || !selectedTicket) return;
-    
+
     try {
       await adminService.replyToTicket(selectedTicket.id, replyText);
       setReplyText('');
@@ -69,185 +76,152 @@ const Support = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Tickets List */}
-      <div className="lg:col-span-2">
-        <h1 className="text-3xl font-bold text-gray-800 mb-6">Support Tickets</h1>
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Statuses</option>
-              <option value="open">Open</option>
-              <option value="in_progress">In Progress</option>
-              <option value="resolved">Resolved</option>
-              <option value="closed">Closed</option>
-            </select>
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All Priorities</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="urgent">Urgent</option>
-            </select>
-          </div>
+    <div className="page-shell">
+      <div className="page-heading">
+        <div>
+          <span className="page-kicker">Support Desk</span>
+          <h1 className="page-title">
+            Ticket <span className="display-accent">workflow</span>
+          </h1>
+          <p className="page-subtitle">Work through the inbox, change states fast, and keep replies in one focused resolution panel.</p>
         </div>
-
-        {/* Tickets List */}
-        <div className="space-y-3">
-          {loading ? (
-            <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-              Loading tickets...
-            </div>
-          ) : tickets.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-              No tickets found
-            </div>
-          ) : (
-            tickets.map((ticket) => (
-              <div
-                key={ticket.id}
-                onClick={() => loadTicketDetails(ticket.id)}
-                className={`bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-md transition-shadow ${
-                  selectedTicket?.id === ticket.id ? 'ring-2 ring-blue-500' : ''
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900">{ticket.subject}</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {ticket.user?.name} • {ticket.user?.phone}
-                    </p>
-                    <div className="flex gap-2 mt-2">
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(ticket.status)}`}>
-                        {ticket.status.replace('_', ' ')}
-                      </span>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        ticket.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                        ticket.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                        ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {ticket.priority}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-500">{formatDate(ticket.createdAt)}</p>
-                    <p className="text-xs text-gray-500 mt-1">{ticket.messageCount} messages</p>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Pagination */}
-        {total > 20 && (
-          <div className="flex justify-center mt-6 gap-2">
-            <button
-              onClick={() => setPage(Math.max(1, page - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="px-4 py-2">Page {page} of {Math.ceil(total / 20)}</span>
-            <button
-              onClick={() => setPage(page + 1)}
-              disabled={page >= Math.ceil(total / 20)}
-              className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Ticket Details */}
-      <div className="lg:col-span-1">
-        {selectedTicket ? (
-          <div className="bg-white rounded-lg shadow-md p-6 sticky top-6">
-            <h2 className="text-xl font-bold mb-4">Ticket Details</h2>
-            
-            <div className="mb-4">
-              <h3 className="font-semibold text-gray-900">{selectedTicket.ticket.subject}</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {selectedTicket.ticket.user?.name}
-              </p>
-            </div>
-
-            {/* Status Change */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-              <select
-                value={selectedTicket.ticket.status}
-                onChange={(e) => handleStatusChange(selectedTicket.ticket.id, e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        <div className="xl:col-span-2 space-y-6">
+          <div className="filter-shell">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="form-control">
+                <option value="">All Statuses</option>
                 <option value="open">Open</option>
                 <option value="in_progress">In Progress</option>
                 <option value="resolved">Resolved</option>
                 <option value="closed">Closed</option>
               </select>
+              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)} className="form-control">
+                <option value="">All Priorities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
             </div>
+          </div>
 
-            {/* Messages */}
-            <div className="mb-4 max-h-96 overflow-y-auto">
-              <h3 className="font-semibold mb-2">Messages</h3>
-              <div className="space-y-3">
-                {selectedTicket.messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`p-3 rounded-lg ${
-                      msg.isAdminMessage ? 'bg-blue-50 ml-4' : 'bg-gray-50 mr-4'
-                    }`}
-                  >
-                    <p className="text-sm text-gray-800">{msg.messageText}</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      {msg.isAdminMessage ? 'Admin' : 'User'} • {formatDate(msg.createdAt)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Reply Form */}
-            {selectedTicket.ticket.status !== 'closed' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Reply</label>
-                <textarea
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows="3"
-                  placeholder="Type your reply..."
-                ></textarea>
-                <button
-                  onClick={handleReply}
-                  disabled={!replyText.trim()}
-                  className="mt-2 w-full bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          <div className="space-y-3">
+            {loading ? (
+              <div className="surface-card empty-state">Loading tickets...</div>
+            ) : tickets.length === 0 ? (
+              <div className="surface-card empty-state">No tickets found</div>
+            ) : (
+              tickets.map((ticket) => (
+                <div
+                  key={ticket.id}
+                  onClick={() => loadTicketDetails(ticket.id)}
+                  className={`ticket-card ${selectedTicket?.id === ticket.id ? 'ticket-card-active' : ''}`}
                 >
-                  <Send className="w-4 h-4" />
-                  Send Reply
-                </button>
-              </div>
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-extrabold tracking-tight text-black">{ticket.subject}</h3>
+                      <p className="table-note mt-2">
+                        {ticket.user?.name} • {ticket.user?.phone}
+                      </p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className={getStatusColor(ticket.status)}>{ticket.status.replace('_', ' ')}</span>
+                        <span className={priorityTone[ticket.priority] || 'status-pill status-pill-muted'}>{ticket.priority}</span>
+                      </div>
+                    </div>
+                    <div className="text-left md:text-right">
+                      <p className="table-note">{formatDate(ticket.createdAt)}</p>
+                      <p className="table-note mt-1">{ticket.messageCount} messages</p>
+                    </div>
+                  </div>
+                </div>
+              ))
             )}
           </div>
-        ) : (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <p className="text-gray-500 text-center">Select a ticket to view details</p>
-          </div>
-        )}
+
+          {total > 20 && (
+            <div className="pagination-shell">
+              <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} className="button-secondary">
+                Previous
+              </button>
+              <span className="table-note">
+                Page {page} of {Math.ceil(total / 20)}
+              </span>
+              <button
+                onClick={() => setPage(page + 1)}
+                disabled={page >= Math.ceil(total / 20)}
+                className="button-secondary"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div>
+          {selectedTicket ? (
+            <div className="surface-card-strong lg:sticky lg:top-6">
+              <h2 className="text-2xl font-extrabold tracking-tight">Ticket details</h2>
+
+              <div className="mt-5 border-b border-black/10 pb-5">
+                <h3 className="text-lg font-bold text-black">{selectedTicket.ticket.subject}</h3>
+                <p className="table-note mt-1">{selectedTicket.ticket.user?.name}</p>
+              </div>
+
+              <div className="mt-5 input-shell">
+                <label className="field-label">Status</label>
+                <select
+                  value={selectedTicket.ticket.status}
+                  onChange={(e) => handleStatusChange(selectedTicket.ticket.id, e.target.value)}
+                  className="form-control"
+                >
+                  <option value="open">Open</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="resolved">Resolved</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="field-label">Messages</h3>
+                <div className="mt-3 max-h-96 space-y-3 overflow-y-auto pr-1">
+                  {selectedTicket.messages.map((msg) => (
+                    <div
+                      key={msg.id}
+                      className={`message-bubble ${msg.isAdminMessage ? 'message-bubble-admin ml-4' : 'mr-4'}`}
+                    >
+                      <p className="text-sm leading-6">{msg.messageText}</p>
+                      <p className="table-note mt-2">
+                        {msg.isAdminMessage ? 'Admin' : 'User'} • {formatDate(msg.createdAt)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {selectedTicket.ticket.status !== 'closed' && (
+                <div className="mt-6">
+                  <label className="field-label">Reply</label>
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    className="form-control mt-2 min-h-28"
+                    rows="3"
+                    placeholder="Type your reply..."
+                  />
+                  <button onClick={handleReply} disabled={!replyText.trim()} className="button-primary mt-3 w-full">
+                    <Send className="h-4 w-4" />
+                    Send Reply
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="surface-card empty-state">Select a ticket to view details</div>
+          )}
+        </div>
       </div>
     </div>
   );

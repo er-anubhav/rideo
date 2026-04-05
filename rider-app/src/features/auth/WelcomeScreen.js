@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, TouchableOpacity, Animated } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
@@ -20,14 +20,7 @@ const WelcomeScreen = ({ navigation }) => {
     useEffect(() => {
         checkLoginStatus();
     }, [checkLoginStatus]);
-    useEffect(() => {
-        // Cleanup
-        return () => {
-            subscription && subscription.remove();
-            clearInterval(collisionInterval);
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Empty dependency array - run once on mount
+
     return (
         <View className="flex-1 bg-white relative">
             <StatusBar style="dark" />

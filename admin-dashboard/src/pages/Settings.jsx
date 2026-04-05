@@ -31,14 +31,14 @@ const Settings = () => {
   };
 
   const handleVehicleChange = (vehicleType) => {
-    const config = fareConfigs.find(c => c.vehicle_type === vehicleType);
+    const config = fareConfigs.find((item) => item.vehicle_type === vehicleType);
     setActiveVehicle(vehicleType);
     setEditedConfig(config);
   };
 
   const handleSave = async () => {
     if (!editedConfig) return;
-    
+
     setSaving(true);
     try {
       await adminService.updateFareConfig(editedConfig.vehicle_type, {
@@ -58,224 +58,202 @@ const Settings = () => {
   };
 
   const handleReset = () => {
-    const original = fareConfigs.find(c => c.vehicle_type === activeVehicle);
+    const original = fareConfigs.find((item) => item.vehicle_type === activeVehicle);
     setEditedConfig(original);
   };
 
   const calculateSampleFare = () => {
     if (!editedConfig) return 0;
-    
-    // Sample: 10km, 20 minutes
+
     const distance = 10;
     const time = 20;
-    
-    const fare = 
+
+    const fare =
       editedConfig.base_fare +
-      (distance * editedConfig.per_km_rate) +
-      (time * editedConfig.per_minute_rate);
-    
+      distance * editedConfig.per_km_rate +
+      time * editedConfig.per_minute_rate;
+
     return Math.max(fare, editedConfig.minimum_fare);
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="text-xl text-gray-600">Loading settings...</div>
-      </div>
-    );
+    return <div className="surface-card empty-state">Loading settings...</div>;
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Fare Configuration</h1>
+    <div className="page-shell">
+      <div className="page-heading">
+        <div>
+          <span className="page-kicker">Configuration</span>
+          <h1 className="page-title">
+            Fare <span className="display-accent">settings</span>
+          </h1>
+          <p className="page-subtitle">Pricing controls now read like a production admin tool, with clear tabs, tighter forms, and a strong preview panel.</p>
+        </div>
+      </div>
 
-      {/* Vehicle Type Tabs */}
-      <div className="bg-white rounded-lg shadow-md mb-6">
-        <div className="border-b border-gray-200">
-          <div className="flex overflow-x-auto">
-            {fareConfigs.map((config) => (
-              <button
-                key={config.vehicle_type}
-                onClick={() => handleVehicleChange(config.vehicle_type)}
-                className={`px-6 py-3 font-medium whitespace-nowrap ${
-                  activeVehicle === config.vehicle_type
-                    ? 'border-b-2 border-blue-500 text-blue-600'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
-                {config.vehicle_type.charAt(0).toUpperCase() + config.vehicle_type.slice(1)}
-              </button>
-            ))}
-          </div>
+      <div className="tab-shell">
+        <div className="tab-header">
+          {fareConfigs.map((config) => (
+            <button
+              key={config.vehicle_type}
+              onClick={() => handleVehicleChange(config.vehicle_type)}
+              className={`tab-button ${activeVehicle === config.vehicle_type ? 'tab-button-active' : ''}`}
+            >
+              {config.vehicle_type.charAt(0).toUpperCase() + config.vehicle_type.slice(1)}
+            </button>
+          ))}
         </div>
 
-        {/* Fare Configuration Form */}
         {editedConfig && (
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Left Column - Settings */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Pricing Parameters</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Base Fare (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={editedConfig.base_fare}
-                      onChange={(e) => setEditedConfig({...editedConfig, base_fare: parseFloat(e.target.value)})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Initial charge when ride starts</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Per Kilometer Rate (₹/km)
-                    </label>
-                    <input
-                      type="number"
-                      value={editedConfig.per_km_rate}
-                      onChange={(e) => setEditedConfig({...editedConfig, per_km_rate: parseFloat(e.target.value)})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Charge per kilometer traveled</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Per Minute Rate (₹/min)
-                    </label>
-                    <input
-                      type="number"
-                      value={editedConfig.per_minute_rate}
-                      onChange={(e) => setEditedConfig({...editedConfig, per_minute_rate: parseFloat(e.target.value)})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Charge per minute of ride duration</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Minimum Fare (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={editedConfig.minimum_fare}
-                      onChange={(e) => setEditedConfig({...editedConfig, minimum_fare: parseFloat(e.target.value)})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Minimum charge for any ride</p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Cancellation Fee (₹)
-                    </label>
-                    <input
-                      type="number"
-                      value={editedConfig.cancellation_fee}
-                      onChange={(e) => setEditedConfig({...editedConfig, cancellation_fee: parseFloat(e.target.value)})}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      min="0"
-                      step="0.01"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Fee charged for ride cancellation</p>
-                  </div>
+          <div className="grid grid-cols-1 gap-8 p-6 xl:grid-cols-2">
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight">Pricing parameters</h2>
+              <div className="mt-6 space-y-4">
+                <div className="input-shell">
+                  <label className="field-label">Base Fare (INR)</label>
+                  <input
+                    type="number"
+                    value={editedConfig.base_fare}
+                    onChange={(e) => setEditedConfig({ ...editedConfig, base_fare: parseFloat(e.target.value) })}
+                    className="form-control"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="field-help">Initial charge when the ride begins.</p>
                 </div>
 
-                <div className="flex gap-3 mt-6">
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    <Save className="w-5 h-5" />
-                    {saving ? 'Saving...' : 'Save Changes'}
-                  </button>
-                  <button
-                    onClick={handleReset}
-                    className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-300 flex items-center gap-2"
-                  >
-                    <RotateCcw className="w-5 h-5" />
-                    Reset
-                  </button>
+                <div className="input-shell">
+                  <label className="field-label">Per Kilometer Rate</label>
+                  <input
+                    type="number"
+                    value={editedConfig.per_km_rate}
+                    onChange={(e) => setEditedConfig({ ...editedConfig, per_km_rate: parseFloat(e.target.value) })}
+                    className="form-control"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="field-help">Distance charge applied during the trip.</p>
+                </div>
+
+                <div className="input-shell">
+                  <label className="field-label">Per Minute Rate</label>
+                  <input
+                    type="number"
+                    value={editedConfig.per_minute_rate}
+                    onChange={(e) => setEditedConfig({ ...editedConfig, per_minute_rate: parseFloat(e.target.value) })}
+                    className="form-control"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="field-help">Time-based component for slower journeys.</p>
+                </div>
+
+                <div className="input-shell">
+                  <label className="field-label">Minimum Fare</label>
+                  <input
+                    type="number"
+                    value={editedConfig.minimum_fare}
+                    onChange={(e) => setEditedConfig({ ...editedConfig, minimum_fare: parseFloat(e.target.value) })}
+                    className="form-control"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="field-help">Protects the unit economics of short rides.</p>
+                </div>
+
+                <div className="input-shell">
+                  <label className="field-label">Cancellation Fee</label>
+                  <input
+                    type="number"
+                    value={editedConfig.cancellation_fee}
+                    onChange={(e) => setEditedConfig({ ...editedConfig, cancellation_fee: parseFloat(e.target.value) })}
+                    className="form-control"
+                    min="0"
+                    step="0.01"
+                  />
+                  <p className="field-help">Fee applied when a rider cancels after acceptance.</p>
                 </div>
               </div>
 
-              {/* Right Column - Preview */}
-              <div>
-                <h3 className="text-lg font-semibold mb-4">Fare Preview</h3>
-                <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                  <div className="border-b pb-3">
-                    <h4 className="text-sm font-medium text-gray-600 mb-2">Current Configuration</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Base Fare:</span>
-                        <span className="font-semibold">{formatCurrency(editedConfig.base_fare)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Per KM:</span>
-                        <span className="font-semibold">{formatCurrency(editedConfig.per_km_rate)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Per Minute:</span>
-                        <span className="font-semibold">{formatCurrency(editedConfig.per_minute_rate)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Minimum Fare:</span>
-                        <span className="font-semibold">{formatCurrency(editedConfig.minimum_fare)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Cancellation Fee:</span>
-                        <span className="font-semibold">{formatCurrency(editedConfig.cancellation_fee)}</span>
-                      </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button onClick={handleSave} disabled={saving} className="button-primary">
+                  <Save className="h-5 w-5" />
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button onClick={handleReset} className="button-secondary">
+                  <RotateCcw className="h-5 w-5" />
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            <div className="surface-card-strong">
+              <span className="page-kicker">Preview</span>
+              <h2 className="mt-4 text-2xl font-extrabold tracking-tight">Fare simulation</h2>
+
+              <div className="mt-6 rounded-3xl border border-black/8 bg-black px-6 py-5 text-white">
+                <p className="metric-label !text-white/60">Estimated Fare</p>
+                <p className="mt-3 text-5xl font-extrabold tracking-tight">{formatCurrency(calculateSampleFare())}</p>
+                <p className="mt-2 text-sm text-white/65">Calculated for a 10 km ride lasting 20 minutes.</p>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-black/8 bg-white/80 p-5">
+                  <h3 className="field-label">Current Configuration</h3>
+                  <div className="mt-4 space-y-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Base Fare</span>
+                      <strong>{formatCurrency(editedConfig.base_fare)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Per KM</span>
+                      <strong>{formatCurrency(editedConfig.per_km_rate)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Per Minute</span>
+                      <strong>{formatCurrency(editedConfig.per_minute_rate)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Minimum Fare</span>
+                      <strong>{formatCurrency(editedConfig.minimum_fare)}</strong>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Cancellation Fee</span>
+                      <strong>{formatCurrency(editedConfig.cancellation_fee)}</strong>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-600 mb-2">Sample Calculation</h4>
-                    <div className="bg-white rounded-lg p-4">
-                      <p className="text-xs text-gray-500 mb-3">For a ride: 10 km, 20 minutes</p>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Base Fare:</span>
-                          <span>{formatCurrency(editedConfig.base_fare)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Distance (10 km):</span>
-                          <span>{formatCurrency(10 * editedConfig.per_km_rate)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Time (20 min):</span>
-                          <span>{formatCurrency(20 * editedConfig.per_minute_rate)}</span>
-                        </div>
-                        <div className="border-t pt-2 flex justify-between font-bold text-lg">
-                          <span>Total Fare:</span>
-                          <span className="text-blue-600">{formatCurrency(calculateSampleFare())}</span>
-                        </div>
-                      </div>
+                <div className="rounded-2xl border border-black/8 bg-white/80 p-5">
+                  <h3 className="field-label">Calculation Breakdown</h3>
+                  <div className="mt-4 space-y-3 text-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Base Fare</span>
+                      <span>{formatCurrency(editedConfig.base_fare)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Distance (10 km)</span>
+                      <span>{formatCurrency(10 * editedConfig.per_km_rate)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="table-note">Time (20 min)</span>
+                      <span>{formatCurrency(20 * editedConfig.per_minute_rate)}</span>
+                    </div>
+                    <div className="flex items-center justify-between border-t border-black/8 pt-3 text-base font-bold">
+                      <span>Total</span>
+                      <span>{formatCurrency(calculateSampleFare())}</span>
                     </div>
                   </div>
+                </div>
 
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <h4 className="text-sm font-semibold text-blue-900 mb-2">💡 Tips</h4>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Set competitive base fares to attract riders</li>
-                      <li>• Balance per-km and per-minute rates</li>
-                      <li>• Minimum fare protects short rides</li>
-                      <li>• Fair cancellation fees reduce abuse</li>
-                    </ul>
-                  </div>
+                <div className="rounded-2xl border border-black/8 bg-white/80 p-5">
+                  <h3 className="field-label">Notes</h3>
+                  <ul className="mt-4 space-y-2 text-sm text-black/70">
+                    <li>Keep base fare competitive to improve conversion at pickup.</li>
+                    <li>Balance distance and time rates for dense traffic corridors.</li>
+                    <li>Use minimum fare and cancellation fee to protect operational margins.</li>
+                  </ul>
                 </div>
               </div>
             </div>

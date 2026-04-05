@@ -8,10 +8,10 @@ import { ActivityIndicator, Alert, Dimensions, Linking, Platform, TouchableOpaci
 import Toast from 'react-native-toast-message';
 import { TextInput } from '@/components/CustomTextInput';
 import { Text } from '@/components/CustomText';
-import Map, { Marker, Polyline } from '@/components/Map';
+import DriverMap from '@/components/DriverMap';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import '../../global.css';
-import { MAPPLS_NAV_DEEPLINK_TEMPLATE } from '@/constants/api';
+import { MAPPLS_NAV_DEEPLINK_TEMPLATE, MAP_TILE_URL_TEMPLATE } from '@/constants/api';
 import { authService } from '@/features/auth/auth.service';
 import { driverControlService, DriverControlData } from '@/features/ride/driver-control.service';
 import { Ride, rideService } from '@/features/ride/ride.service';
@@ -312,8 +312,6 @@ const ActiveRideScreen = () => {
             : { latitude: 28.6200, longitude: 77.2100 };
     }, [ride]);
 
-    const mapRef = React.useRef<any>(null);
-    const [tracksViewChanges, setTracksViewChanges] = useState(true);
     const [showArriveModal, setShowArriveModal] = useState(false);
     const [showOtpModal, setShowOtpModal] = useState(false);
     const [showPermissionModal, setShowPermissionModal] = useState(false);
@@ -326,32 +324,6 @@ const ActiveRideScreen = () => {
         if (ride.status === 'DRIVER_ARRIVED') return 'ready';
         return 'pickup';
     }, [ride]);
-
-    useEffect(() => {
-        // Stop tracking view changes after icon load to prevent flickering
-        const timer = setTimeout(() => {
-            setTracksViewChanges(false);
-        }, 100);
-        return () => clearTimeout(timer);
-    }, []);
-
-    useEffect(() => {
-        if (!ride) return;
-
-        // Fit map to coordinates with responsive padding
-        const timer = setTimeout(() => {
-            const coords = rideStatus === 'ongoing'
-                ? [resolvedDriverLocation, dropoffLocation]
-                : [resolvedDriverLocation, pickupLocation];
-
-            mapRef.current?.fitToCoordinates(coords, {
-                edgePadding: { top: 160, right: 20, bottom: 320, left: 20 },
-                animated: true,
-            });
-        }, 1000);
-
-        return () => clearTimeout(timer);
-    }, [ride, rideStatus, resolvedDriverLocation, dropoffLocation, pickupLocation]);
 
     const openGoogleMaps = async () => {
         const scheme = Platform.select({ ios: 'maps:', android: 'geo:' });
@@ -517,15 +489,6 @@ const ActiveRideScreen = () => {
             </View>
         );
     }
-
-    const mapStyle = [
-        { "elementType": "geometry", "stylers": [{ "color": "#f5f5f5" }] },
-        { "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
-        { "elementType": "labels.text.fill", "stylers": [{ "color": "#616161" }] },
-        { "elementType": "labels.text.stroke", "stylers": [{ "color": "#f5f5f5" }] },
-        { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#ffffff" }] }
-    ];
-
     const destination = rideStatus === 'ongoing' ? dropoffLocation : pickupLocation;
     const fallbackRouteCoordinates = [
         resolvedDriverLocation,
@@ -548,60 +511,31 @@ const ActiveRideScreen = () => {
             <StatusBar style="dark" />
 
             {/* Map */}
-            <Map
-                ref={mapRef}
+            <DriverMap
                 style={{ width, height }}
-                initialRegion={{
-                    latitude: 28.6135,
-                    longitude: 77.2190,
+                region={{
+                    latitude: resolvedDriverLocation.latitude,
+                    longitude: resolvedDriverLocation.longitude,
                     latitudeDelta: 0.05,
                     longitudeDelta: 0.05,
                 }}
-                customMapStyle={mapStyle}
-            >
-                {/* Main Route Line (Rendered FIRST + Low zIndex) */}
-                <Polyline
-                    coordinates={routeCoordinates}
-                    strokeColor="#7C3AED"
-                    strokeWidth={4}
-                    lineCap="round"
-                    tappable={false}
-                    zIndex={-1}
-                />
-
-                {/* Driver Marker */}
-                <Marker
-                    coordinate={resolvedDriverLocation}
-                    title="You"
-                    zIndex={100}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    tracksViewChanges={tracksViewChanges}
-                >
-                    <View className="w-9 h-9 bg-white rounded-full items-center justify-center shadow-lg border-2 border-[#7C3aED]">
-                        <MaterialIcons name="directions-car" size={20} color="#7C3aED" />
-                    </View>
-                </Marker>
-
-                {/* Destination Marker */}
-                <Marker
-                    coordinate={destination}
-                    title={rideStatus === 'ongoing' ? 'Dropoff' : 'Pickup'}
-                    zIndex={101}
-                    anchor={{ x: 0.5, y: 0.5 }}
-                    tracksViewChanges={tracksViewChanges}
-                >
-                    <View className="items-center justify-center">
-                        <View className="w-11 h-11 bg-[#7C3aED] rounded-full border-4 border-white shadow-xl items-center justify-center">
-                            <MaterialIcons name="person-pin" size={26} color="white" />
-                        </View>
-                        <View className="bg-white px-2.5 py-1.5 rounded-lg shadow-lg mt-1 scale-90 border border-gray-100">
-                            <Text className="text-[10px] font-bold text-gray-800 uppercase font-display tracking-wider">
-                                {rideStatus === 'ongoing' ? 'Dropoff' : 'Pickup'}
-                            </Text>
-                        </View>
-                    </View>
-                </Marker>
-            </Map>
+                location={{
+                    coords: {
+                        latitude: pickupLocation.latitude,
+                        longitude: pickupLocation.longitude,
+                    },
+                }}
+                destination={{
+                    lat: destination.latitude,
+                    lon: destination.longitude,
+                    name: rideStatus === 'ongoing' ? dropoffLabel : pickupLabel,
+                }}
+                driverLocation={resolvedDriverLocation}
+                routeCoordinates={routeCoordinates}
+                tileUrlTemplate={MAP_TILE_URL_TEMPLATE}
+                mapplsRestKey={process.env.EXPO_PUBLIC_MAPPLS_REST_KEY}
+                interactive
+            />
 
             {/* SOS / Emergency Button */}
             <SafeAreaView className="absolute top-8 right-6 z-50 pointer-events-none" edges={['top']}>

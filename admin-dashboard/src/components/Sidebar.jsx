@@ -19,37 +19,40 @@ const Sidebar = () => {
   ];
 
   return (
-    <div className="w-64 bg-gray-900 text-white h-screen fixed left-0 top-0 overflow-y-auto">
-      <div className="p-6">
-        <h1 className="text-2xl font-bold">Admin Panel</h1>
-        <p className="text-sm text-gray-400">Ride Sharing Platform</p>
-      </div>
-      
-      <nav className="mt-6">
+    <aside className="sidebar-shell">
+      <div className="sidebar-panel">
+        <div>
+          <span className="page-kicker">Operations Console</span>
+          <h1 className="brand-title">
+            Rideo <span className="display-accent">admin</span>
+          </h1>
+          <p className="brand-subtitle">Control the platform, track performance, and manage live operations.</p>
+        </div>
+
+        <nav className="nav-list">
         {menuItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors ${
-                isActive ? 'bg-gray-800 text-white border-l-4 border-blue-500' : ''
-              }`
+              `nav-item ${isActive ? 'active' : ''}`
             }
           >
-            <item.icon className="w-5 h-5 mr-3" />
-            <span>{item.label}</span>
+            <item.icon className="w-5 h-5" />
+            <span className="nav-label">{item.label}</span>
           </NavLink>
         ))}
-        
+
         <button
           onClick={authService.logout}
-          className="flex items-center w-full px-6 py-3 text-gray-300 hover:bg-gray-800 hover:text-white transition-colors mt-4"
+          className="nav-logout"
         >
-          <LogOut className="w-5 h-5 mr-3" />
-          <span>Logout</span>
+          <LogOut className="w-5 h-5" />
+          <span className="nav-label">Logout</span>
         </button>
-      </nav>
-    </div>
+        </nav>
+      </div>
+    </aside>
   );
 };
 

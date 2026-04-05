@@ -15,7 +15,7 @@ For day-to-day setup and integration notes, use the root [README.md](README.md),
 - **Driver Partner App**: Expo app under `driver-app/`
 - **Rider App**: Expo app under `rider-app/`
 
-The older terms "driver application" and "rider application" should be treated as legacy naming. Some compatibility config keys still use older MQTT wording, but the current runtime contract is:
+The older terms "driver application" and "rider application" should be treated as legacy naming. The current runtime contract is:
 
 - REST over `http(s)://<host>:8001/api`
 - FastAPI WebSockets over `ws(s)://<host>:8001/ws`

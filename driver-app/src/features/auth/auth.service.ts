@@ -2,6 +2,7 @@ import apiClient, { handleApiError } from '@/api/api';
 import { API_ENDPOINTS } from '@/constants/api';
 import { clearAllStorage, tokenStorage, userStorage } from '@/utils/storage';
 import { realtimeService } from '@/api/realtime.service';
+import { normalizeIndianPhone } from '@/utils/phone';
 
 export interface OTPRequest {
     phoneNumber: string;
@@ -26,17 +27,12 @@ export interface AuthResponse {
     };
 }
 
-/**
- * Authentication Service
- */
 export const authService = {
-    /**
-     * Request OTP for phone number
-     */
     async requestOTP(phone: string): Promise<{ message: string }> {
         try {
+            const normalizedPhone = normalizeIndianPhone(phone);
             const response = await apiClient.post(API_ENDPOINTS.AUTH.REQUEST_OTP, {
-                phone,
+                phone: normalizedPhone,
                 purpose: 'LOGIN',
             });
             return response.data;
@@ -45,15 +41,13 @@ export const authService = {
         }
     },
 
-    /**
-     * Verify OTP and get JWT token
-     */
     async verifyOTP(phone: string, code: string): Promise<AuthResponse> {
         try {
+            const normalizedPhone = normalizeIndianPhone(phone);
             const response = await apiClient.post<AuthResponse>(
                 API_ENDPOINTS.AUTH.VERIFY_OTP,
                 {
-                    phone,
+                    phone: normalizedPhone,
                     otp: code,
                 }
             );
@@ -61,7 +55,6 @@ export const authService = {
             const token = (response.data as any).token || (response.data as any).access_token;
             const user = (response.data as any).user;
 
-            // Store token and user data
             await tokenStorage.save(token);
             await userStorage.save(user);
 
@@ -71,9 +64,6 @@ export const authService = {
         }
     },
 
-    /**
-     * Get current authenticated user
-     */
     async getCurrentUser(): Promise<any> {
         try {
             const response = await apiClient.get('/users/me');
@@ -85,9 +75,6 @@ export const authService = {
         }
     },
 
-    /**
-     * Logout - Clear all stored data
-     */
     async logout(): Promise<void> {
         try {
             realtimeService.disconnect();
@@ -97,16 +84,14 @@ export const authService = {
         }
     },
 
-    /**
-     * Test Driver Register (Bypasses OTP and Verification)
-     */
     async testDriverRegister(phone: string, name: string, vehicleType: string): Promise<AuthResponse> {
         try {
-            await apiClient.post(API_ENDPOINTS.AUTH.REQUEST_OTP, { phone });
+            const normalizedPhone = normalizeIndianPhone(phone);
+            await apiClient.post(API_ENDPOINTS.AUTH.REQUEST_OTP, { phone: normalizedPhone });
 
             const response = await apiClient.post<AuthResponse>(
                 API_ENDPOINTS.AUTH.VERIFY_OTP,
-                { phone, otp: '123456', name }
+                { phone: normalizedPhone, otp: '123456', name }
             );
 
             const token = (response.data as any).token || (response.data as any).access_token;
@@ -122,13 +107,13 @@ export const authService = {
 
             try {
                 await apiClient.post('/drivers/register', {
-                    license_number: `TEST${phone.slice(-6)}`,
+                    license_number: `TEST${normalizedPhone.slice(-6)}`,
                     vehicle: {
                         vehicle_type: vehicleType === 'BIKE' ? 'bike' : 'sedan',
                         make: vehicleType === 'BIKE' ? 'Hero' : 'Maruti',
                         model: vehicleType === 'BIKE' ? 'Splendor' : 'Dzire',
                         color: 'Black',
-                        number_plate: `TS${phone.slice(-4)}`,
+                        number_plate: `TS${normalizedPhone.slice(-4)}`,
                         year: 2024,
                     },
                 });
@@ -142,9 +127,6 @@ export const authService = {
         }
     },
 
-    /**
-     * Check if user is authenticated
-     */
     async isAuthenticated(): Promise<boolean> {
         const token = await tokenStorage.get();
         return !!token;

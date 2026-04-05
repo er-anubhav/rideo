@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { resolveBackendUrl } from '@/utils/network-config';
 
 // Guard: do not run storage or network calls during SSR
 const isClient = typeof window !== 'undefined';
@@ -11,7 +12,6 @@ let inFlightConfigRequest: Promise<AppConfig | null> | null = null;
 export interface AppConfig {
     apiBaseUrl: string;
     wsBaseUrl: string;
-    mqttBrokerUrl?: string;
     version?: string;
     message?: string;
 }
@@ -36,8 +36,13 @@ export const configService = {
                 });
 
                 if (response.data && response.data.apiBaseUrl) {
-                    await this.cacheConfig(response.data);
-                    return response.data;
+                    const normalizedConfig: AppConfig = {
+                        ...response.data,
+                        apiBaseUrl: resolveBackendUrl(response.data.apiBaseUrl) || response.data.apiBaseUrl,
+                        wsBaseUrl: resolveBackendUrl(response.data.wsBaseUrl) || response.data.wsBaseUrl,
+                    };
+                    await this.cacheConfig(normalizedConfig);
+                    return normalizedConfig;
                 }
                 return null;
             } catch (error) {
@@ -85,11 +90,11 @@ export const configService = {
         if (cached?.apiBaseUrl) {
             // Keep cached config fast for requests, then refresh in background.
             void this.fetchRemoteConfig();
-            return cached.apiBaseUrl;
+            return resolveBackendUrl(cached.apiBaseUrl) || cached.apiBaseUrl;
         }
 
         const remote = await this.fetchRemoteConfig();
-        return remote?.apiBaseUrl || fallback;
+        return resolveBackendUrl(remote?.apiBaseUrl || fallback) || fallback;
     },
 
     /**

@@ -74,9 +74,9 @@ Create `.env` from `.env.example` and adjust values for your environment.
 - `EXPO_PUBLIC_API_BASE_URL`
   REST API base URL, for example `http://localhost:8001/api`
 - `EXPO_PUBLIC_WS_BASE_URL`
-  preferred backend WebSocket base URL, for example `ws://localhost:8001/ws`
-- `EXPO_PUBLIC_MQTT_BROKER_URL`
-  legacy alias still supported by the compatibility layer; point it at the same backend WebSocket base if present
+  backend WebSocket base URL, for example `ws://localhost:8001/ws`
+- `EXPO_PUBLIC_MAPPLS_REST_KEY`
+  Mappls web maps key used by the native map renderer
 - `EXPO_PUBLIC_CONFIG_URL`
   optional remote config endpoint
 - `EXPO_PUBLIC_MAP_TILE_URL_TEMPLATE`
@@ -107,4 +107,3 @@ npm run lint
 
 - use `https://` for REST and `wss://` for WebSockets
 - keep `EXPO_PUBLIC_API_BASE_URL` and `EXPO_PUBLIC_WS_BASE_URL` on the same backend host
-- if you keep `EXPO_PUBLIC_MQTT_BROKER_URL` for compatibility, point it to the same WebSocket base as `EXPO_PUBLIC_WS_BASE_URL`

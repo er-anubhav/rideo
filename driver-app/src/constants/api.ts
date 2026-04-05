@@ -1,7 +1,7 @@
-const DEFAULT_DEV_API_BASE_URL = 'http://localhost:8001/api';
-const DEFAULT_PROD_API_BASE_URL = 'https://api.mrrideo.com/api';
-const DEFAULT_DEV_WS_BASE_URL = 'ws://localhost:8001/ws';
-const DEFAULT_PROD_WS_BASE_URL = 'wss://api.mrrideo.com/ws';
+import { resolveBackendUrl } from '@/utils/network-config';
+
+const DEFAULT_DEV_API_BASE_URL = 'http://192.168.1.14:8001/api';
+const DEFAULT_DEV_WS_BASE_URL = 'ws://192.168.1.14:8001/ws';
 const DEFAULT_REQUEST_TIMEOUT = 30000;
 
 const getTrimmedEnv = (value?: string): string | null => {
@@ -20,14 +20,14 @@ const stripTrailingSlash = (url: string): string =>
 
 export const API_BASE_URL =
     stripTrailingSlash(
-        getTrimmedEnv(process.env.EXPO_PUBLIC_API_BASE_URL) ||
-        (__DEV__ ? DEFAULT_DEV_API_BASE_URL : DEFAULT_PROD_API_BASE_URL)
+        resolveBackendUrl(getTrimmedEnv(process.env.EXPO_PUBLIC_API_BASE_URL)) ||
+        DEFAULT_DEV_API_BASE_URL
     );
 
 export const WS_BASE_URL =
     stripTrailingSlash(
-        getTrimmedEnv(process.env.EXPO_PUBLIC_WS_BASE_URL) ||
-        (__DEV__ ? DEFAULT_DEV_WS_BASE_URL : DEFAULT_PROD_WS_BASE_URL)
+        resolveBackendUrl(getTrimmedEnv(process.env.EXPO_PUBLIC_WS_BASE_URL)) ||
+        DEFAULT_DEV_WS_BASE_URL
     );
 
 export const REQUEST_TIMEOUT = getNumberEnv(
@@ -39,13 +39,10 @@ export const ENABLE_REMOTE_LOGGING =
     process.env.EXPO_PUBLIC_ENABLE_REMOTE_LOGGING === 'true' || !__DEV__;
 
 const realtimeEnabledEnv =
-    getTrimmedEnv(process.env.EXPO_PUBLIC_ENABLE_REALTIME) ??
-    getTrimmedEnv(process.env.EXPO_PUBLIC_ENABLE_MQTT);
+    getTrimmedEnv(process.env.EXPO_PUBLIC_ENABLE_REALTIME);
 
 export const ENABLE_REALTIME =
     realtimeEnabledEnv !== 'false';
-
-export const ENABLE_MQTT = ENABLE_REALTIME;
 
 export const CONFIG_URL =
     getTrimmedEnv(process.env.EXPO_PUBLIC_CONFIG_URL);
@@ -61,6 +58,10 @@ export const MAPPLS_CLIENT_ID =
 
 export const MAPPLS_CLIENT_SECRET =
     getTrimmedEnv(process.env.EXPO_PUBLIC_MAPPLS_CLIENT_SECRET);
+
+export const MAP_TILE_URL_TEMPLATE =
+    getTrimmedEnv(process.env.EXPO_PUBLIC_MAP_TILE_URL_TEMPLATE) ||
+    'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 // API Endpoints
 export const API_ENDPOINTS = {

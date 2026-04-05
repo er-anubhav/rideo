@@ -15,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       await authService.sendOTP(phone);
       setOtpSent(true);
@@ -30,7 +30,7 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await authService.verifyOTP(phone, otp, 'Admin');
       localStorage.setItem('adminToken', response.data.access_token);
@@ -43,32 +43,35 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <LogIn className="w-8 h-8 text-blue-600" />
+    <div className="auth-shell">
+      <div className="auth-card">
+        <div className="text-center">
+          <div className="auth-mark">
+            <LogIn className="h-8 w-8" />
           </div>
-          <h1 className="text-3xl font-bold text-gray-800">Admin Login</h1>
-          <p className="text-gray-600 mt-2">Ride Sharing Platform</p>
+          <span className="auth-kicker">Secure Access</span>
+          <h1 className="page-title mt-5">
+            Admin <span className="display-accent">login</span>
+          </h1>
+          <p className="page-subtitle mx-auto">
+            Sign in to monitor rides, manage wallets, and keep the platform moving without friction.
+          </p>
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <div className="mt-6 rounded-2xl border border-black/10 bg-black px-4 py-3 text-sm font-medium text-white">
             {error}
           </div>
         )}
 
-        <form onSubmit={otpSent ? handleVerifyOTP : handleSendOTP}>
-          <div className="mb-6">
-            <label className="block text-gray-700 font-medium mb-2">
-              Phone Number
-            </label>
+        <form onSubmit={otpSent ? handleVerifyOTP : handleSendOTP} className="mt-8 space-y-5">
+          <div className="input-shell">
+            <label className="field-label">Phone Number</label>
             <input
               type="tel"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="form-control"
               placeholder="9999999999"
               required
               disabled={otpSent}
@@ -76,47 +79,35 @@ const Login = () => {
           </div>
 
           {otpSent && (
-            <div className="mb-6">
-              <label className="block text-gray-700 font-medium mb-2">
-                OTP
-              </label>
+            <div className="input-shell">
+              <label className="field-label">One Time Password</label>
               <input
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="form-control"
                 placeholder="123456"
                 required
                 maxLength="6"
               />
-              <p className="text-sm text-gray-500 mt-2">
-                Default OTP for testing: 123456
-              </p>
+              <p className="field-help">Default OTP for testing: `123456`</p>
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading} className="button-primary w-full">
             {loading ? 'Please wait...' : otpSent ? 'Verify OTP' : 'Send OTP'}
           </button>
 
           {otpSent && (
-            <button
-              type="button"
-              onClick={() => setOtpSent(false)}
-              className="w-full mt-3 text-blue-600 hover:text-blue-700 font-medium"
-            >
+            <button type="button" onClick={() => setOtpSent(false)} className="button-secondary w-full">
               Change Phone Number
             </button>
           )}
         </form>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <p className="text-sm text-gray-600 text-center">
-            Admin Phone: <strong>9999999999</strong>
+        <div className="mt-8 border-t border-black/10 pt-6 text-center">
+          <p className="table-note">
+            Admin phone for local testing: <strong className="text-black">9999999999</strong>
           </p>
         </div>
       </div>

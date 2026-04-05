@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIG } from '@/config/config';
+import { resolveBackendUrl } from '@/utils/networkConfig';
 import { configService } from '../../api/config.service';
 import {
     mapBackendRideStatusToRider,
@@ -13,9 +14,9 @@ const getTrimmedEnv = (value) => {
     return trimmed.length > 0 ? trimmed : null;
 };
 
-const envWsBaseUrl = getTrimmedEnv(process.env.EXPO_PUBLIC_WS_BASE_URL || process.env.EXPO_PUBLIC_MQTT_BROKER_URL);
+const envWsBaseUrl = getTrimmedEnv(process.env.EXPO_PUBLIC_WS_BASE_URL);
 const localDevWsBaseUrl = __DEV__ && envWsBaseUrl
-    ? envWsBaseUrl.replace(/\/+$/, '')
+    ? resolveBackendUrl(envWsBaseUrl)
     : null;
 
 const buildSocketUrl = (baseUrl, riderId, token) => {
@@ -83,7 +84,7 @@ class RealtimeService {
 
         const targetUrl = localDevWsBaseUrl
             ? localDevWsBaseUrl
-            : await configService.getWsBaseUrl(CONFIG.WS_BASE_URL || CONFIG.MQTT_BROKER_URL);
+            : await configService.getWsBaseUrl(CONFIG.WS_BASE_URL);
         const socketUrl = buildSocketUrl(targetUrl, userId, token);
 
         return new Promise((resolve, reject) => {
@@ -323,7 +324,9 @@ class RealtimeService {
 
         try {
             const route = await this.fetchRideRoute(ride.id);
-            this.emit(`status/ride/${ride.id}/route`, route);
+            if (route) {
+                this.emit(`status/ride/${ride.id}/route`, route);
+            }
         } catch {
             // Route refresh is best-effort only.
         }
@@ -342,26 +345,30 @@ class RealtimeService {
     async fetchCurrentRide() {
         if (!this.authToken) return null;
 
-        const baseUrl = await this.getApiBaseUrl();
-        const response = await fetch(`${baseUrl}/rides/current`, {
-            headers: {
-                Authorization: `Bearer ${this.authToken}`,
-            },
-        });
+        try {
+            const baseUrl = await this.getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/rides/current`, {
+                headers: {
+                    Authorization: `Bearer ${this.authToken}`,
+                },
+            });
 
-        if (!response.ok) {
+            if (!response.ok) {
+                return null;
+            }
+
+            const payload = await response.json();
+            if (!payload?.ride) {
+                return null;
+            }
+
+            return normalizeRide(payload, {
+                driver: payload?.driver,
+                vehicle: payload?.vehicle,
+            });
+        } catch {
             return null;
         }
-
-        const payload = await response.json();
-        if (!payload?.ride) {
-            return null;
-        }
-
-        return normalizeRide(payload, {
-            driver: payload?.driver,
-            vehicle: payload?.vehicle,
-        });
     }
 
     async fetchRideRoute(rideId) {
@@ -369,19 +376,23 @@ class RealtimeService {
             return null;
         }
 
-        const baseUrl = await this.getApiBaseUrl();
-        const response = await fetch(`${baseUrl}/rides/${rideId}/route`, {
-            headers: {
-                Authorization: `Bearer ${this.authToken}`,
-            },
-        });
+        try {
+            const baseUrl = await this.getApiBaseUrl();
+            const response = await fetch(`${baseUrl}/rides/${rideId}/route`, {
+                headers: {
+                    Authorization: `Bearer ${this.authToken}`,
+                },
+            });
 
-        if (!response.ok) {
-            throw new Error('Unable to refresh ride route');
+            if (!response.ok) {
+                return null;
+            }
+
+            const payload = await response.json();
+            return normalizeRoutePayload(payload);
+        } catch {
+            return null;
         }
-
-        const payload = await response.json();
-        return normalizeRoutePayload(payload);
     }
 
     flushQueue() {

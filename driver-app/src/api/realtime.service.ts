@@ -2,6 +2,7 @@ import { ENABLE_REALTIME, WS_BASE_URL } from '@/constants/api';
 import { tokenStorage, userStorage } from '@/utils/storage';
 import { appLogger } from '@/utils/app-logger';
 import { normalizeDriverRide } from '@/features/backend/backend-adapter';
+import { resolveBackendUrl } from '@/utils/network-config';
 
 import { configService } from './config.service';
 
@@ -13,7 +14,7 @@ const getTrimmedEnv = (value?: string): string | null => {
 
 const envWsBaseUrl = getTrimmedEnv(process.env.EXPO_PUBLIC_WS_BASE_URL);
 const localDevWsBaseUrl = __DEV__ && envWsBaseUrl
-    ? envWsBaseUrl.replace(/\/+$/, '')
+    ? resolveBackendUrl(envWsBaseUrl)
     : null;
 
 type SubscriptionHandler = (message: unknown) => void;
@@ -72,7 +73,9 @@ class RealtimeService {
                 targetUrl = localDevWsBaseUrl;
             } else {
                 const cached = await configService.getCachedConfig();
-                targetUrl = cached?.wsBaseUrl || cached?.mqttBrokerUrl || WS_BASE_URL;
+                targetUrl =
+                    resolveBackendUrl(cached?.wsBaseUrl) ||
+                    WS_BASE_URL;
             }
         }
 

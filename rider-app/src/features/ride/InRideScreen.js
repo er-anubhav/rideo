@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from '@/components/Map';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { rideService } from '@/features/booking/rideService';
 import { realtimeService } from '@/features/ride/realtime.service';
+import { CONFIG } from '@/config/config';
+import HomeMap from '@/components/HomeMap';
 
 const safeGetProp = (obj, key) => {
     try {
@@ -14,6 +15,11 @@ const safeGetProp = (obj, key) => {
     } catch {
         return undefined;
     }
+};
+
+const toFiniteNumber = (value) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
 };
 
 const InRideScreen = (props = {}) => {
@@ -170,8 +176,66 @@ const InRideScreen = (props = {}) => {
         : (ride?.eta || '12 min');
     const arrivalTime = ride?.arrivalTime || '10:45 PM';
     const driverLocation = liveDriverLocation || (ride?.driverLocation
-        ? { lat: Number(ride.driverLocation.lat), lng: Number(ride.driverLocation.lng) }
+        ? {
+            lat: toFiniteNumber(ride.driverLocation.lat),
+            lng: toFiniteNumber(ride.driverLocation.lng),
+        }
         : null);
+    const pickupPoint = {
+        lat: toFiniteNumber(ride?.pickupLat ?? rideRequest?.pickupLat),
+        lon: toFiniteNumber(ride?.pickupLng ?? rideRequest?.pickupLng),
+        name: ride?.pickupAddress || rideRequest?.pickupAddress || 'Pickup',
+    };
+    const dropPoint = {
+        lat: toFiniteNumber(ride?.dropLat ?? rideRequest?.dropLat),
+        lon: toFiniteNumber(ride?.dropLng ?? rideRequest?.dropLng),
+        name: ride?.dropAddress || rideRequest?.dropAddress || 'Destination',
+    };
+    const isDropoffPhase = ['STARTED', 'IN_PROGRESS', 'COMPLETED'].includes(rideStatus);
+    const mapOrigin = (driverLocation?.lat != null && driverLocation?.lng != null)
+        ? driverLocation
+        : (pickupPoint.lat != null && pickupPoint.lon != null
+            ? { lat: pickupPoint.lat, lng: pickupPoint.lon }
+            : null);
+    const rawDestination = isDropoffPhase ? dropPoint : pickupPoint;
+    const mapDestination = (rawDestination?.lat != null && rawDestination?.lon != null)
+        ? rawDestination
+        : (dropPoint.lat != null && dropPoint.lon != null ? dropPoint : null);
+    const fallbackRouteCoordinates = [
+        mapOrigin ? { latitude: mapOrigin.lat, longitude: mapOrigin.lng } : null,
+        mapDestination ? { latitude: mapDestination.lat, longitude: mapDestination.lon } : null,
+    ].filter((coord, index, list) =>
+        coord &&
+        Number.isFinite(coord.latitude) &&
+        Number.isFinite(coord.longitude) &&
+        (index === 0 || coord.latitude !== list[index - 1].latitude || coord.longitude !== list[index - 1].longitude)
+    );
+    const resolvedRouteCoordinates = routeCoordinates.length > 1
+        ? routeCoordinates
+        : fallbackRouteCoordinates;
+    const mapAnchorPoints = [
+        mapOrigin ? { latitude: mapOrigin.lat, longitude: mapOrigin.lng } : null,
+        mapDestination ? { latitude: mapDestination.lat, longitude: mapDestination.lon } : null,
+    ].filter(Boolean);
+    const mapCenter = mapAnchorPoints.length > 0
+        ? {
+            latitude: mapAnchorPoints.reduce((sum, point) => sum + point.latitude, 0) / mapAnchorPoints.length,
+            longitude: mapAnchorPoints.reduce((sum, point) => sum + point.longitude, 0) / mapAnchorPoints.length,
+        }
+        : {
+            latitude: 28.6139,
+            longitude: 77.2090,
+        };
+    const mapRegion = {
+        latitude: mapCenter.latitude,
+        longitude: mapCenter.longitude,
+        latitudeDelta: mapAnchorPoints.length > 1
+            ? Math.max(Math.abs(mapAnchorPoints[0].latitude - mapAnchorPoints[1].latitude) * 1.8, 0.02)
+            : 0.02,
+        longitudeDelta: mapAnchorPoints.length > 1
+            ? Math.max(Math.abs(mapAnchorPoints[0].longitude - mapAnchorPoints[1].longitude) * 1.8, 0.02)
+            : 0.02,
+    };
 
     return (
         <View className="flex-1 bg-white relative">
@@ -179,56 +243,26 @@ const InRideScreen = (props = {}) => {
 
             {/* Map Background */}
             <View className="absolute inset-0 z-0">
-                <MapView
-                    provider={PROVIDER_GOOGLE}
+                <HomeMap
                     style={{ width: '100%', height: '65%' }}
-                    initialRegion={{
-                        latitude: rideRequest?.pickupLat || 12.9716,
-                        longitude: rideRequest?.pickupLng || 77.5946,
-                        latitudeDelta: 0.05,
-                        longitudeDelta: 0.05,
+                    region={mapRegion}
+                    interactive
+                    location={{
+                        coords: {
+                            latitude: mapOrigin?.lat ?? mapCenter.latitude,
+                            longitude: mapOrigin?.lng ?? mapCenter.longitude,
+                        },
                     }}
-                >
-                    {routeCoordinates.length > 1 && (
-                        <Polyline
-                            coordinates={routeCoordinates}
-                            strokeColor="#7E22CE"
-                            strokeWidth={4}
-                        />
-                    )}
-
-                    {/* Pickup Marker */}
-                    <Marker coordinate={{
-                        latitude: rideRequest?.pickupLat || 12.9716,
-                        longitude: rideRequest?.pickupLng || 77.5946
-                    }}>
-                        <View className="bg-white p-1 rounded-full shadow-md border border-purple-100">
-                            <MaterialIcons name="location-pin" size={20} color="#9333EA" />
-                        </View>
-                    </Marker>
-
-                    {/* Drop Marker */}
-                    <Marker coordinate={{
-                        latitude: rideRequest?.dropLat || 12.2958,
-                        longitude: rideRequest?.dropLng || 76.6394
-                    }}>
-                        <View className="bg-black p-1 rounded-full shadow-md">
-                            <MaterialIcons name="flag" size={20} color="white" />
-                        </View>
-                    </Marker>
-
-                    {/* Driver Marker (only if matched) */}
-                    {driverLocation && (
-                        <Marker coordinate={{
-                            latitude: driverLocation.lat,
-                            longitude: driverLocation.lng
-                        }}>
-                            <View className="bg-purple-900 p-1 rounded-full shadow-xl border-2 border-white">
-                                <MaterialIcons name="directions-car" size={24} color="white" />
-                            </View>
-                        </Marker>
-                    )}
-                </MapView>
+                    destination={mapDestination ? {
+                        lat: mapDestination.lat,
+                        lon: mapDestination.lon,
+                        name: mapDestination.name,
+                    } : null}
+                    driverLocation={driverLocation}
+                    routeCoordinates={resolvedRouteCoordinates}
+                    tileUrlTemplate={CONFIG.MAP_TILE_URL_TEMPLATE}
+                    mapplsRestKey={CONFIG.MAPPLS_REST_KEY}
+                />
 
                 <View className="absolute inset-x-0 bottom-[35%] h-40 bg-gradient-to-b from-transparent to-white pointer-events-none" />
             </View>

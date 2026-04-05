@@ -26,7 +26,12 @@ export const authService = {
 
         await AsyncStorage.setItem('userToken', token);
         await mergeAndStoreUser(user);
-        await realtimeService.connect();
+
+        try {
+            await realtimeService.connect();
+        } catch (error) {
+            console.warn('RiderApp: Login succeeded but realtime connection failed. Continuing without blocking auth.', error);
+        }
 
         return { ...response.data, token, user };
     },
