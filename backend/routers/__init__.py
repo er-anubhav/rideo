@@ -101,6 +101,9 @@ from .earnings import router as earnings_router
 # Notifications router - /api/notifications
 from .notifications import router as notifications_router
 
+# Support router - /api/support
+from .support import router as support_router
+
 # Export all routers
 __all__ = [
     'auth_router',
@@ -113,4 +116,5 @@ __all__ = [
     'promo_router',
     'earnings_router',
     'notifications_router',
+    'support_router',
 ]

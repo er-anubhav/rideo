@@ -79,7 +79,8 @@ from routers import (
     admin_router,     # /api/admin - Admin dashboard and management
     promo_router,     # /api/promo - Promo code management
     earnings_router,  # /api/earnings - Driver earnings reports
-    notifications_router  # /api/notifications - Notification history
+    notifications_router,  # /api/notifications - Notification history
+    support_router    # /api/support - Support tickets and chat
 )
 
 # Configure logging
@@ -181,6 +182,7 @@ app.include_router(admin_router)     # Admin dashboard endpoints
 app.include_router(promo_router)     # Promo code endpoints
 app.include_router(earnings_router)  # Driver earnings endpoints
 app.include_router(notifications_router)  # Notification endpoints
+app.include_router(support_router)   # Support ticket endpoints
 
 
 # ==================== ROOT ENDPOINTS ====================
