@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  text {
+    font-family: 'PlusJakartaSans-Regular';
+  }
+}
+
+@layer utilities {
+  .font-regular {
+    font-family: 'PlusJakartaSans-Regular';
+    font-weight: 400;
+  }
+  .font-medium {
+    font-family: 'PlusJakartaSans-Medium';
+    font-weight: 500;
+  }
+  .font-semibold {
+    font-family: 'PlusJakartaSans-SemiBold';
+    font-weight: 600;
+  }
+  .font-bold {
+    font-family: 'PlusJakartaSans-Bold';
+    font-weight: 700;
+  }
+  .font-extrabold {
+    font-family: 'PlusJakartaSans-ExtraBold';
+    font-weight: 800;
+  }
+  .font-display {
+    font-family: 'PlusJakartaSans-ExtraBold';
+    font-weight: 800;
+  }
+}
