@@ -89,6 +89,9 @@ from .rides import router as rides_router
 # Rating router - /api/ratings
 from .ratings import router as ratings_router
 
+# Admin dashboard router - /api/admin
+from .admin import router as admin_router
+
 # Promo code router - /api/promo
 from .promo import router as promo_router
 
@@ -112,6 +115,7 @@ __all__ = [
     'maps_router',
     'rides_router',
     'ratings_router',
+    'admin_router',
     'promo_router',
     'earnings_router',
     'notifications_router',
