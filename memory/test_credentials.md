@@ -1,31 +1,49 @@
-# Test Credentials - Rideshare Backend
+# Test Credentials for Ride Sharing Platform
 
-## Admin User
-- **Phone**: 9999999999
-- **OTP**: 123456 (fallback)
-- **Role**: admin
+## Admin Account
+- **Phone:** 9999999999
+- **OTP:** 123456 (fallback OTP for development)
+- **Role:** Admin
+- **Access:** Full admin dashboard access
 
-## Test Rider
-- **Phone**: 9876543210
-- **OTP**: 123456 (fallback)
-- **Role**: rider
+## Test Users Created
+1. **Phone:** 5555555555
+   - **Name:** Test User 5
+   - **Role:** Rider
 
-## Test Driver
-- **Phone**: 8888888888
-- **OTP**: 123456 (fallback)
-- **Role**: driver
-- **License**: DL123456789
-- **Vehicle**: Maruti Dzire (Sedan) - DL 01 AB 1234
+2. **Phone:** 8888888888
+   - **Role:** Rider
+
+3. **Phone:** 9876543210
+   - **Role:** Rider
+
+## Authentication Flow
+1. Send OTP: `POST /api/auth/send-otp` with `{"phone": "9999999999"}`
+2. Verify OTP: `POST /api/auth/verify-otp` with `{"phone": "9999999999", "otp": "123456"}`
+3. Use the returned `access_token` in Authorization header: `Bearer <token>`
+
+## Database Connection
+- **Host:** localhost
+- **Port:** 5432
+- **Database:** rideshare_db
+- **Username:** postgres
+- **Password:** postgres123
 
 ## API Endpoints
-- Auth: `/api/auth/send-otp`, `/api/auth/verify-otp`
-- Users: `/api/users/me`
-- Drivers: `/api/drivers/register`, `/api/drivers/toggle-online`
-- Rides: `/api/rides/estimate`, `/api/rides/request`
-- Admin: `/api/admin/dashboard`
+- **Backend API:** http://localhost:8001
+- **API Documentation:** http://localhost:8001/docs
+- **Admin Dashboard:** http://localhost:3001
 
-## Database
-- PostgreSQL: `rideshare_db`
-- Host: localhost:5432
-- User: postgres
-- Password: postgres
+## Environment Configuration
+All environment variables are configured in:
+- Backend: `/app/backend/.env`
+- Admin Dashboard: `/app/admin-dashboard/.env`
+- Rider App: `/app/rider-app/.env`
+- Driver App: `/app/driver-app/.env`
+
+## Mappls API Credentials (Configured)
+- REST Key: 365604b92d239a28d858feb5022fb356
+- Client ID: Configured in .env files
+- Client Secret: Configured in .env files
+
+Last Updated: April 6, 2026
