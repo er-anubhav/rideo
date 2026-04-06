@@ -205,7 +205,7 @@ class RealtimeService {
                 pickup: payload?.pickup,
                 drop: payload?.drop,
                 status: 'searching',
-                fare: { estimated: payload?.fare },
+                fare: { estimated: payload?.fare || payload?.estimated_fare },
                 vehicle_type: payload?.vehicle_type,
             }, { overrideStatus: 'MATCHED' });
 
@@ -220,6 +220,44 @@ class RealtimeService {
             this.emit(`ride/${ride.id}`, {
                 event: 'ride_matched',
                 data: ride,
+            });
+            return;
+        }
+
+        // NEW: Handle ride_no_longer_available event
+        if (event === 'ride_no_longer_available') {
+            const rideId = String(payload?.ride_id || '');
+            appLogger.info('Ride no longer available:', rideId);
+            
+            const message = {
+                id: rideId,
+                status: 'TAKEN',
+                event: 'ride_unavailable',
+                data: { id: rideId, status: 'TAKEN' },
+            };
+
+            if (this.driverId) {
+                this.emit(`status/user/${this.driverId}/ride-unavailable`, message);
+            }
+            this.emit(`ride/${rideId}/unavailable`, message);
+            return;
+        }
+
+        // NEW: Handle ride_status_changed event
+        if (event === 'ride_status_changed') {
+            const rideId = String(payload?.ride_id || '');
+            const status = payload?.status;
+            
+            if (this.driverId) {
+                this.emit(`status/user/${this.driverId}/active-ride`, {
+                    id: rideId,
+                    status: status?.toUpperCase(),
+                    data: payload,
+                });
+            }
+            this.emit(`ride/${rideId}`, {
+                event: 'ride_status_changed',
+                data: payload,
             });
             return;
         }

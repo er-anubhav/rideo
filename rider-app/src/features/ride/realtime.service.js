@@ -255,6 +255,29 @@ class RealtimeService {
 
         if (event === 'ride_status_changed') {
             await this.refreshRideState(payload?.ride_id, payload?.status);
+            return;
+        }
+
+        // NEW: Handle ride auto-cancellation
+        if (event === 'ride_cancelled') {
+            const rideId = payload?.ride_id;
+            this.emitRideState(rideId, {
+                id: rideId,
+                status: 'CANCELLED',
+                data: {
+                    id: rideId,
+                    status: 'CANCELLED',
+                    reason: payload?.reason || 'Ride cancelled',
+                },
+            });
+            
+            // Show notification to rider
+            this.emit('ride/notification', {
+                type: 'ride_cancelled',
+                title: 'Ride Cancelled',
+                message: payload?.reason || 'Your ride has been cancelled',
+            });
+            return;
         }
     }
 

@@ -2,13 +2,17 @@ import * as Location from 'expo-location';
 import { realtimeService } from './realtime.service';
 import { userStorage } from '@/utils/storage';
 import { appLogger } from '@/utils/app-logger';
+import api from './api';
 
-const PULSE_INTERVAL = 5000; // 5 seconds as per PDF
+const PULSE_INTERVAL = 5000; // 5 seconds
+const TRACKING_INTERVAL = 10000; // 10 seconds for ride tracking
 const LOCATION_TOPIC = (driverId: string) => `location/driver/${driverId}`;
 
 class LocationPulseService {
     private intervalId: any = null;
+    private trackingIntervalId: any = null;
     private isRunning = false;
+    private activeRideId: string | null = null;
 
     /**
      * Start the location pulse
@@ -34,6 +38,38 @@ class LocationPulseService {
     }
 
     /**
+     * Start tracking for an active ride
+     * Sends location points to backend for route tracking
+     */
+    startRideTracking(rideId: string) {
+        if (this.trackingIntervalId) {
+            this.stopRideTracking();
+        }
+
+        this.activeRideId = rideId;
+        appLogger.info('Starting ride tracking for ride:', rideId);
+
+        // Immediate first tracking point
+        this.sendTrackingPoint(rideId);
+
+        this.trackingIntervalId = setInterval(() => {
+            this.sendTrackingPoint(rideId);
+        }, TRACKING_INTERVAL);
+    }
+
+    /**
+     * Stop ride tracking
+     */
+    stopRideTracking() {
+        if (this.trackingIntervalId) {
+            clearInterval(this.trackingIntervalId);
+            this.trackingIntervalId = null;
+        }
+        this.activeRideId = null;
+        appLogger.info('Ride tracking stopped');
+    }
+
+    /**
      * Stop the location pulse
      */
     stop() {
@@ -41,8 +77,29 @@ class LocationPulseService {
             clearInterval(this.intervalId);
             this.intervalId = null;
         }
+        this.stopRideTracking();
         this.isRunning = false;
         appLogger.info('Location pulse stopped');
+    }
+
+    /**
+     * Send tracking point to backend API
+     */
+    private async sendTrackingPoint(rideId: string) {
+        try {
+            const location = await Location.getCurrentPositionAsync({
+                accuracy: Location.Accuracy.Balanced
+            });
+
+            await api.post(`/rides/${rideId}/track`, {
+                lat: location.coords.latitude,
+                lng: location.coords.longitude
+            });
+
+            appLogger.debug('Tracking point sent for ride:', rideId);
+        } catch (error) {
+            appLogger.error('Failed to send tracking point', error);
+        }
     }
 
     /**
