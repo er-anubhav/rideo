@@ -264,57 +264,62 @@ class ConnectionManager:
             self._queue_notification(driver_id, notification)
             logger.info(f"Notification queued for driver {driver_id}: {notification_type.value}")
     
-    async def notify_ride_accepted(self, rider_id: str, driver_name: str, vehicle_info: str, eta_mins: int, ride_data: dict):
+    async def notify_ride_accepted(self, rider_id: str, driver_name: str, vehicle_info: str, eta_mins: int, ride_data: dict, db: Optional[AsyncSession] = None):
         """Notify rider that driver accepted the ride"""
         await self.notify_rider(
             rider_id,
             NotificationType.RIDE_ACCEPTED,
             "Ride Accepted!",
             f"{driver_name} is on the way in a {vehicle_info}. ETA: {eta_mins} mins",
-            ride_data
+            ride_data,
+            db=db
         )
     
-    async def notify_driver_arriving(self, rider_id: str, driver_name: str, eta_mins: int, ride_data: dict):
+    async def notify_driver_arriving(self, rider_id: str, driver_name: str, eta_mins: int, ride_data: dict, db: Optional[AsyncSession] = None):
         """Notify rider that driver is arriving"""
         await self.notify_rider(
             rider_id,
             NotificationType.DRIVER_ARRIVING,
             "Driver Arriving",
             f"{driver_name} is arriving in {eta_mins} mins",
-            ride_data
+            ride_data,
+            db=db
         )
     
-    async def notify_driver_arrived(self, rider_id: str, driver_name: str, ride_data: dict):
+    async def notify_driver_arrived(self, rider_id: str, driver_name: str, ride_data: dict, db: Optional[AsyncSession] = None):
         """Notify rider that driver has arrived"""
         await self.notify_rider(
             rider_id,
             NotificationType.DRIVER_ARRIVED,
             "Driver Arrived!",
             f"{driver_name} has arrived at pickup location",
-            ride_data
+            ride_data,
+            db=db
         )
     
-    async def notify_ride_started(self, rider_id: str, ride_data: dict):
+    async def notify_ride_started(self, rider_id: str, ride_data: dict, db: Optional[AsyncSession] = None):
         """Notify rider that ride has started"""
         await self.notify_rider(
             rider_id,
             NotificationType.RIDE_STARTED,
             "Ride Started",
             "Your ride has started. Enjoy your trip!",
-            ride_data
+            ride_data,
+            db=db
         )
     
-    async def notify_ride_completed(self, rider_id: str, fare: float, ride_data: dict):
+    async def notify_ride_completed(self, rider_id: str, fare: float, ride_data: dict, db: Optional[AsyncSession] = None):
         """Notify rider that ride is completed"""
         await self.notify_rider(
             rider_id,
             NotificationType.RIDE_COMPLETED,
             "Ride Completed!",
             f"Your ride is complete. Fare: ₹{fare}. Please pay in cash.",
-            ride_data
+            ride_data,
+            db=db
         )
     
-    async def notify_ride_cancelled(self, user_id: str, user_type: str, cancelled_by: str, reason: str, ride_data: dict):
+    async def notify_ride_cancelled(self, user_id: str, user_type: str, cancelled_by: str, reason: str, ride_data: dict, db: Optional[AsyncSession] = None):
         """Notify user that ride was cancelled"""
         notification_type = NotificationType.RIDE_CANCELLED if user_type == "rider" else NotificationType.RIDE_CANCELLED_BY_RIDER
         
@@ -324,7 +329,8 @@ class ConnectionManager:
                 notification_type,
                 "Ride Cancelled",
                 f"Your ride was cancelled by {cancelled_by}. {reason}",
-                ride_data
+                ride_data,
+                db=db
             )
         else:
             await self.notify_driver(
@@ -332,7 +338,8 @@ class ConnectionManager:
                 notification_type,
                 "Ride Cancelled",
                 f"Ride cancelled by rider. {reason}",
-                ride_data
+                ride_data,
+                db=db
             )
     
     async def notify_new_ride_request(self, driver_id: str, pickup_address: str, fare: float, ride_data: dict):
@@ -365,14 +372,15 @@ class ConnectionManager:
                 ride_data
             )
     
-    async def notify_payment_received(self, driver_id: str, amount: float, ride_data: dict):
+    async def notify_payment_received(self, driver_id: str, amount: float, ride_data: dict, db: Optional[AsyncSession] = None):
         """Notify driver of payment received"""
         await self.notify_driver(
             driver_id,
             NotificationType.PAYMENT_RECEIVED,
             "Payment Received",
             f"Cash payment of ₹{amount} collected for ride",
-            ride_data
+            ride_data,
+            db=db
         )
 
 

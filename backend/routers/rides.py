@@ -463,29 +463,78 @@ async def accept_ride(
     await db.commit()
     await db.refresh(ride)
     
+    # Get driver location
+    driver_location = {
+        "lat": profile.current_lat or ride.pickup_lat,
+        "lng": profile.current_lng or ride.pickup_lng
+    }
+    
     # Send push notification to rider
     vehicle_info = f"{vehicle.color} {vehicle.make} {vehicle.model} ({vehicle.number_plate})"
     eta_info = await mappls_service.get_eta(
-        (profile.current_lat or ride.pickup_lat, profile.current_lng or ride.pickup_lng),
+        (driver_location["lat"], driver_location["lng"]),
         (ride.pickup_lat, ride.pickup_lng)
     )
     eta_mins = eta_info["duration_mins"] if eta_info else 10
     
+    ride_data = {
+        "ride_id": str(ride.id),
+        "driver_id": str(current_user.id),
+        "driver_name": current_user.name or "Driver",
+        "driver_phone": current_user.phone,
+        "vehicle": vehicle.to_dict(),
+        "driver_location": driver_location,
+        "eta_mins": eta_mins,
+        "status": RideStatus.ACCEPTED.value
+    }
+    
+    # Save notification to database and send via WebSocket
     await connection_manager.notify_ride_accepted(
         str(ride.rider_id),
         current_user.name or "Driver",
         vehicle_info,
         eta_mins,
-        {"ride_id": str(ride.id), "driver_id": str(current_user.id), "vehicle": vehicle.to_dict()}
+        ride_data,
+        db=db  # Pass db session to save notification
     )
     
-    # Register ride in connection manager
-    connection_manager.register_ride(str(ride.id), str(ride.rider_id), str(current_user.id))
+    # Send explicit status update event to rider (separate from notification)
+    await connection_manager.send_to_rider(
+        str(ride.rider_id),
+        {
+            "event": "ride_status_changed",
+            "ride_id": str(ride.id),
+            "status": RideStatus.ACCEPTED.value,
+            "driver": {
+                "id": str(current_user.id),
+                "name": current_user.name or "Driver",
+                "phone": current_user.phone,
+                "rating": profile.rating,
+                "location": driver_location
+            },
+            "vehicle": vehicle.to_dict(),
+            "eta_mins": eta_mins,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+    
+    # Register/Update ride in connection manager
+    if str(ride.id) in connection_manager.active_rides:
+        connection_manager.update_ride_driver(str(ride.id), str(current_user.id))
+    else:
+        connection_manager.register_ride(str(ride.id), str(ride.rider_id), str(current_user.id))
     
     return {
         "success": True,
         "message": "Ride accepted!",
-        "ride": ride.to_dict()
+        "ride": ride.to_dict(),
+        "driver": {
+            "name": current_user.name,
+            "phone": current_user.phone,
+            "rating": profile.rating,
+            "location": driver_location
+        },
+        "vehicle": vehicle.to_dict()
     }
 
 
@@ -507,6 +556,7 @@ async def driver_arriving(
     
     ride.status = RideStatus.ARRIVING
     await db.commit()
+    await db.refresh(ride)
     
     # Get driver profile for ETA
     profile_result = await db.execute(
@@ -520,15 +570,34 @@ async def driver_arriving(
     ) if profile else None
     eta_mins = eta_info["duration_mins"] if eta_info else 5
     
-    # Send push notification
+    ride_data = {
+        "ride_id": str(ride.id),
+        "eta_mins": eta_mins,
+        "status": RideStatus.ARRIVING.value
+    }
+    
+    # Send push notification with db session
     await connection_manager.notify_driver_arriving(
         str(ride.rider_id),
         current_user.name or "Driver",
         eta_mins,
-        {"ride_id": str(ride.id)}
+        ride_data,
+        db=db  # Save to database
     )
     
-    return {"success": True, "message": "Status updated to arriving"}
+    # Send explicit status update event
+    await connection_manager.send_to_rider(
+        str(ride.rider_id),
+        {
+            "event": "ride_status_changed",
+            "ride_id": str(ride.id),
+            "status": RideStatus.ARRIVING.value,
+            "eta_mins": eta_mins,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+    
+    return {"success": True, "message": "Status updated to arriving", "ride": ride.to_dict()}
 
 
 @router.post("/{ride_id}/arrived")
@@ -549,15 +618,35 @@ async def driver_arrived(
     
     ride.status = RideStatus.ARRIVED
     await db.commit()
+    await db.refresh(ride)
     
-    # Send push notification
+    ride_data = {
+        "ride_id": str(ride.id),
+        "status": RideStatus.ARRIVED.value,
+        "otp": ride.get_start_otp() if hasattr(ride, 'get_start_otp') else None
+    }
+    
+    # Send push notification with db session
     await connection_manager.notify_driver_arrived(
         str(ride.rider_id),
         current_user.name or "Driver",
-        {"ride_id": str(ride.id)}
+        ride_data,
+        db=db  # Save to database
     )
     
-    return {"success": True, "message": "Status updated to arrived"}
+    # Send explicit status update event
+    await connection_manager.send_to_rider(
+        str(ride.rider_id),
+        {
+            "event": "ride_status_changed",
+            "ride_id": str(ride.id),
+            "status": RideStatus.ARRIVED.value,
+            "otp": ride.get_start_otp() if hasattr(ride, 'get_start_otp') else None,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+    
+    return {"success": True, "message": "Status updated to arrived", "ride": ride.to_dict()}
 
 
 @router.post("/{ride_id}/start")
@@ -583,14 +672,36 @@ async def start_ride(
     ride.status = RideStatus.IN_PROGRESS
     ride.started_at = datetime.now(timezone.utc)
     await db.commit()
+    await db.refresh(ride)
     
-    # Send push notification
+    ride_data = {
+        "ride_id": str(ride.id),
+        "status": RideStatus.IN_PROGRESS.value,
+        "drop_address": ride.drop_address,
+        "started_at": ride.started_at.isoformat()
+    }
+    
+    # Send push notification with db session
     await connection_manager.notify_ride_started(
         str(ride.rider_id),
-        {"ride_id": str(ride.id), "drop_address": ride.drop_address}
+        ride_data,
+        db=db  # Save to database
+    )
+    
+    # Send explicit status update event
+    await connection_manager.send_to_rider(
+        str(ride.rider_id),
+        {
+            "event": "ride_status_changed",
+            "ride_id": str(ride.id),
+            "status": RideStatus.IN_PROGRESS.value,
+            "drop_address": ride.drop_address,
+            "started_at": ride.started_at.isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
     )
 
-    return {"success": True, "message": "Ride started"}
+    return {"success": True, "message": "Ride started", "ride": ride.to_dict()}
 
 
 @router.get("/{ride_id}/route")
@@ -698,18 +809,56 @@ async def complete_ride(
         rider.total_rides += 1
     
     await db.commit()
+    await db.refresh(ride)
     
-    # Send push notifications
+    ride_data = {
+        "ride_id": str(ride.id),
+        "fare": ride.actual_fare,
+        "distance_km": ride.actual_distance_km,
+        "duration_mins": ride.actual_duration_mins,
+        "status": RideStatus.COMPLETED.value,
+        "completed_at": ride.completed_at.isoformat()
+    }
+    
+    # Send push notifications with db session
     await connection_manager.notify_ride_completed(
         str(ride.rider_id),
         ride.actual_fare,
-        {"ride_id": str(ride.id), "fare": ride.actual_fare}
+        ride_data,
+        db=db  # Save to database
     )
     
     await connection_manager.notify_payment_received(
         str(current_user.id),
         ride.actual_fare,
-        {"ride_id": str(ride.id)}
+        ride_data,
+        db=db  # Save to database
+    )
+    
+    # Send explicit status update events
+    await connection_manager.send_to_rider(
+        str(ride.rider_id),
+        {
+            "event": "ride_status_changed",
+            "ride_id": str(ride.id),
+            "status": RideStatus.COMPLETED.value,
+            "fare": ride.actual_fare,
+            "distance_km": ride.actual_distance_km,
+            "duration_mins": ride.actual_duration_mins,
+            "completed_at": ride.completed_at.isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    )
+    
+    await connection_manager.send_to_driver(
+        str(current_user.id),
+        {
+            "event": "ride_status_changed",
+            "ride_id": str(ride.id),
+            "status": RideStatus.COMPLETED.value,
+            "earnings": ride.actual_fare,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
     )
     
     # Complete ride in connection manager
@@ -829,9 +978,18 @@ async def cancel_ride(
             driver.is_online = True
     
     await db.commit()
+    await db.refresh(ride)
     
-    # Send push notifications
+    # Send push notifications with db session
     reason_text = request.reason or "No reason provided"
+    ride_data = {
+        "ride_id": str(ride.id),
+        "status": RideStatus.CANCELLED.value,
+        "cancelled_by": ride.cancelled_by,
+        "reason": reason_text,
+        "cancelled_at": ride.cancelled_at.isoformat()
+    }
+    
     if is_rider and ride.driver_id:
         # Notify driver that rider cancelled
         await connection_manager.notify_ride_cancelled(
@@ -839,7 +997,20 @@ async def cancel_ride(
             "driver",
             "rider",
             reason_text,
-            {"ride_id": str(ride.id)}
+            ride_data,
+            db=db  # Save to database
+        )
+        # Send explicit status update
+        await connection_manager.send_to_driver(
+            str(ride.driver_id),
+            {
+                "event": "ride_status_changed",
+                "ride_id": str(ride.id),
+                "status": RideStatus.CANCELLED.value,
+                "cancelled_by": "rider",
+                "reason": reason_text,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
         )
     elif is_driver:
         # Notify rider that driver cancelled
@@ -848,13 +1019,26 @@ async def cancel_ride(
             "rider",
             "driver",
             reason_text,
-            {"ride_id": str(ride.id)}
+            ride_data,
+            db=db  # Save to database
+        )
+        # Send explicit status update
+        await connection_manager.send_to_rider(
+            str(ride.rider_id),
+            {
+                "event": "ride_status_changed",
+                "ride_id": str(ride.id),
+                "status": RideStatus.CANCELLED.value,
+                "cancelled_by": "driver",
+                "reason": reason_text,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
         )
     
     # Complete ride in connection manager
     connection_manager.complete_ride(str(ride.id))
     
-    return {"success": True, "message": "Ride cancelled"}
+    return {"success": True, "message": "Ride cancelled", "ride": ride.to_dict()}
 
 
 @router.get("/history")
