@@ -16,6 +16,7 @@ import { authService } from '@/features/auth/auth.service';
 import { driverControlService, DriverControlData } from '@/features/ride/driver-control.service';
 import { Ride, rideService } from '@/features/ride/ride.service';
 import { realtimeService } from '@/api/realtime.service';
+import { locationPulseService } from '@/api/location-pulse.service';
 import { appLogger } from '@/utils/app-logger';
 import PermissionModal from '@/components/PermissionModal';
 
@@ -396,6 +397,10 @@ const ActiveRideScreen = () => {
             setRide((previousRide) => previousRide ? { ...previousRide, ...updatedRide } : updatedRide);
             setShowOtpModal(false);
             setOtpInput('');
+            
+            // FIX: Start ride tracking for accurate distance calculation
+            locationPulseService.startRideTracking(ride.id);
+            appLogger.info('Ride tracking started for ride:', ride.id);
         } catch (error: any) {
             Toast.show({ type: 'error', text1: 'Error', text2: error.message || 'Failed to start ride' });
         } finally {
@@ -408,6 +413,10 @@ const ActiveRideScreen = () => {
 
         setLoading(true);
         try {
+            // FIX: Stop ride tracking before completing
+            locationPulseService.stopRideTracking();
+            appLogger.info('Ride tracking stopped for ride:', ride.id);
+            
             await rideService.completeRide(ride.id);
             setRide((previousRide) => previousRide ? { ...previousRide, status: 'COMPLETED' } : previousRide);
             router.replace('/ride/payment');

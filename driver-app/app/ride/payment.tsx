@@ -1,18 +1,75 @@
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState } from 'react';
-import { ScrollView, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { ScrollView, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import Toast from 'react-native-toast-message';
 import { TextInput } from '@/components/CustomTextInput';
 import { Text } from '@/components/CustomText';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { paymentService } from '@/api/payment.service';
+import { rideService } from '@/features/ride/ride.service';
+import { appLogger } from '@/utils/app-logger';
 import '../../global.css';
 
 const PaymentScreen = () => {
     const router = useRouter();
+    const params = useLocalSearchParams();
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+    const [rideData, setRideData] = useState<any>(null);
+
+    useEffect(() => {
+        // Get ride data from current ride
+        const loadRideData = async () => {
+            try {
+                const currentRide = await rideService.getCurrentRide();
+                setRideData(currentRide);
+            } catch (error) {
+                appLogger.error('Failed to load ride data', error);
+            }
+        };
+        loadRideData();
+    }, []);
+
+    const handleConfirmPayment = async () => {
+        if (!rideData?.id) {
+            Toast.show({ type: 'error', text1: 'Error', text2: 'No ride data found' });
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // FIX: Confirm payment with backend
+            const result = await paymentService.confirmPayment(rideData.id);
+            setPaymentConfirmed(true);
+            
+            Toast.show({
+                type: 'success',
+                text1: 'Payment Confirmed!',
+                text2: `₹${result.amount} confirmed as received`,
+            });
+            
+            appLogger.info('Payment confirmed for ride:', rideData.id);
+            
+            // Navigate to dashboard after a short delay
+            setTimeout(() => {
+                router.push('/dashboard' as any);
+            }, 1500);
+        } catch (error: any) {
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.message || 'Failed to confirm payment',
+            });
+            appLogger.error('Payment confirmation failed', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <View className="flex-1 bg-white">
@@ -34,17 +91,25 @@ const PaymentScreen = () => {
                 <View className="mx-6 bg-white p-6 rounded-3xl">
                     <View className="flex-row items-center justify-between mb-6">
                         <Text className="text-gray-900 font-bold text-lg font-display">Total Fare</Text>
-                        <Text className="text-3xl font-extrabold text-[#7C3aED] font-display">₹240.00</Text>
+                        <Text className="text-3xl font-extrabold text-[#7C3aED] font-display">
+                            ₹{rideData?.actualFare?.toFixed(2) || rideData?.fare?.toFixed(2) || '240.00'}
+                        </Text>
                     </View>
 
                     <View className="space-y-3">
                         <View className="flex-row justify-between">
                             <Text className="text-gray-500 text-sm font-display">Base Fare</Text>
-                            <Text className="text-gray-900 font-bold text-sm font-display">₹180.00</Text>
+                            <Text className="text-gray-900 font-bold text-sm font-display">
+                                ₹{rideData?.baseFare?.toFixed(2) || '180.00'}
+                            </Text>
                         </View>
                         <View className="flex-row justify-between">
-                            <Text className="text-gray-500 text-sm font-display">Distance (4.2km)</Text>
-                            <Text className="text-gray-900 font-bold text-sm font-display">₹42.00</Text>
+                            <Text className="text-gray-500 text-sm font-display">
+                                Distance ({rideData?.actualDistanceKm?.toFixed(1) || rideData?.distanceKm?.toFixed(1) || '4.2'}km)
+                            </Text>
+                            <Text className="text-gray-900 font-bold text-sm font-display">
+                                ₹{((rideData?.actualDistanceKm || rideData?.distanceKm || 4.2) * 10).toFixed(2)}
+                            </Text>
                         </View>
                         <View className="flex-row justify-between">
                             <Text className="text-gray-500 text-sm font-display">Platform Fee</Text>
@@ -65,9 +130,14 @@ const PaymentScreen = () => {
                             </View>
                             <View>
                                 <Text className="text-amber-900 font-bold text-sm font-display">Cash Payment</Text>
-                                <Text className="text-amber-700/60 text-xs font-display">Collect cash from passenger</Text>
+                                <Text className="text-amber-700/60 text-xs font-display">
+                                    {paymentConfirmed ? 'Payment Confirmed ✓' : 'Collect cash from passenger'}
+                                </Text>
                             </View>
                         </View>
+                        {paymentConfirmed && (
+                            <MaterialIcons name="check-circle" size={24} color="#10B981" />
+                        )}
                     </View>
                 </View>
 
@@ -108,16 +178,21 @@ const PaymentScreen = () => {
             <SafeAreaView className="bg-white border-t border-gray-50 p-6 shadow-[0_-5px_20px_rgba(0,0,0,0.02)]">
                 <TouchableOpacity
                     className="w-full px-6 shadow-lg shadow-[#7C3aED]/25"
-                    onPress={() => router.push('/dashboard' as any)}
+                    onPress={handleConfirmPayment}
+                    disabled={loading || paymentConfirmed}
                 >
                     <LinearGradient
-                        colors={['#7C3aED', '#6D28D9']}
+                        colors={paymentConfirmed ? ['#10B981', '#059669'] : ['#7C3aED', '#6D28D9']}
                         className="w-full py-4 rounded-xl items-center"
-                        style={{ borderRadius: 16 }}
+                        style={{ borderRadius: 16, opacity: (loading || paymentConfirmed) ? 0.7 : 1 }}
                     >
-                        <Text className="text-white font-bold font-display text-lg">
-                            Collect Cash & Done
-                        </Text>
+                        {loading ? (
+                            <ActivityIndicator color="white" />
+                        ) : (
+                            <Text className="text-white font-bold font-display text-lg">
+                                {paymentConfirmed ? 'Payment Confirmed ✓' : `Confirm Cash Received (₹${rideData?.actualFare?.toFixed(2) || rideData?.fare?.toFixed(2) || '240.00'})`}
+                            </Text>
+                        )}
                     </LinearGradient>
                 </TouchableOpacity>
             </SafeAreaView>
