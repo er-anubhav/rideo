@@ -20,7 +20,8 @@ const fetchCurrentRide = async () => {
 
 export const rideService = {
     /**
-     * Create a ride request through REST, then fan it out to drivers over the rider WebSocket.
+     * Create a ride request through REST API
+     * Backend automatically broadcasts to drivers via WebSocket
      */
     async requestRide(rideData) {
         const requestPayload = {
@@ -36,25 +37,15 @@ export const rideService = {
         const response = await apiClient.post('/rides/request', requestPayload);
         const ride = normalizeRide(response.data?.ride || response.data);
 
+        // FIX: Remove duplicate WebSocket request
+        // Backend already broadcasts to all drivers via WebSocket (P0 Fix #3)
+        // The realtimeService.sendRideRequest() was creating duplicate rides
+        
+        // Just ensure WebSocket is connected for receiving updates
         try {
             await realtimeService.connect();
-            realtimeService.sendRideRequest({
-                rideId: ride.id,
-                pickup: {
-                    lat: ride.pickupLat,
-                    lng: ride.pickupLng,
-                    address: ride.pickupAddress,
-                },
-                drop: {
-                    lat: ride.dropLat,
-                    lng: ride.dropLng,
-                    address: ride.dropAddress,
-                },
-                vehicleType: requestPayload.vehicle_type,
-                fare: ride.totalFare || ride.fare,
-            });
-        } catch {
-            // Keep the REST-created ride authoritative even if the socket fan-out is unavailable.
+        } catch (error) {
+            console.warn('RiderApp: WebSocket connection failed, will retry', error);
         }
 
         return ride;

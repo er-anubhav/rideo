@@ -90,9 +90,18 @@ export const rideService = {
         }
     },
 
-    async arriveAtPickup(rideId: string): Promise<Ride> {
+    async markArriving(rideId: string): Promise<Ride> {
         try {
             await apiClient.post(`/rides/${rideId}/arriving`);
+            const ride = await getCurrentRide();
+            return (ride || { id: rideId, status: 'ARRIVING' }) as Ride;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    },
+
+    async markArrived(rideId: string): Promise<Ride> {
+        try {
             await apiClient.post(`/rides/${rideId}/arrived`);
             const ride = await getCurrentRide();
             return (ride || { id: rideId, status: 'DRIVER_ARRIVED' }) as Ride;
@@ -101,9 +110,22 @@ export const rideService = {
         }
     },
 
+    // DEPRECATED: Use markArriving() and markArrived() separately
+    async arriveAtPickup(rideId: string): Promise<Ride> {
+        try {
+            await apiClient.post(`/rides/${rideId}/arriving`);
+            // NOTE: Don't call arrived here - let driver manually confirm when at pickup
+            const ride = await getCurrentRide();
+            return (ride || { id: rideId, status: 'ARRIVING' }) as Ride;
+        } catch (error) {
+            throw new Error(handleApiError(error));
+        }
+    },
+
     async startRide(rideId: string, otp?: string): Promise<Ride> {
         try {
-            await apiClient.post(`/rides/${rideId}/start`, otp ? { otp } : {});
+            // FIX: Backend expects otp in request body, not as optional param
+            await apiClient.post(`/rides/${rideId}/start`, { otp: otp || '' });
             const ride = await getCurrentRide();
             return (ride || { id: rideId, status: 'IN_PROGRESS' }) as Ride;
         } catch (error) {

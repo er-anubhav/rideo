@@ -107,11 +107,6 @@ class LocationPulseService {
      */
     private async pulse(driverId: string) {
         try {
-            // Check if the realtime channel is connected
-            if (!realtimeService.getStatus()) {
-                await realtimeService.connect();
-            }
-
             // Get location
             const location = await Location.getCurrentPositionAsync({
                 accuracy: Location.Accuracy.Balanced
@@ -125,8 +120,24 @@ class LocationPulseService {
                 timestamp: new Date().toISOString()
             };
 
-            const topic = LOCATION_TOPIC(driverId);
-            realtimeService.publish(topic, payload);
+            // Try WebSocket first
+            if (realtimeService.getStatus()) {
+                const topic = LOCATION_TOPIC(driverId);
+                realtimeService.publish(topic, payload);
+                appLogger.debug('Location sent via WebSocket');
+            } else {
+                // Fallback to HTTP API when WebSocket disconnected
+                appLogger.info('WebSocket disconnected, using HTTP fallback for location');
+                try {
+                    await api.post('/drivers/location', {
+                        lat: payload.latitude,
+                        lng: payload.longitude
+                    });
+                    appLogger.debug('Location sent via HTTP API');
+                } catch (apiError) {
+                    appLogger.error('Failed to send location via HTTP', apiError);
+                }
+            }
         } catch (error) {
             appLogger.error('Location pulse failed', error);
         }
