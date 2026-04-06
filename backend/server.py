@@ -64,6 +64,7 @@ from sqlalchemy import select
 # Internal imports
 from models.database import init_db, get_db
 from models.user import User, UserRole
+from models.driver import DriverProfile
 from services.fare_service import fare_service
 from services.auth_service import auth_service
 from websocket_manager import connection_manager
