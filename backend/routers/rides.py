@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, or_, func
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from uuid import UUID
+import asyncio
+import logging
 
 from models.database import get_db
 from models.user import User, UserRole
@@ -16,6 +18,7 @@ from services.fare_service import fare_service
 from websocket_manager import connection_manager, NotificationType
 
 router = APIRouter(prefix="/api/rides", tags=["Rides"])
+logger = logging.getLogger(__name__)
 
 
 class FareEstimateRequest(BaseModel):
@@ -53,6 +56,61 @@ class RideSosRequest(BaseModel):
     message: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+
+
+class TrackLocationRequest(BaseModel):
+    lat: float
+    lng: float
+
+
+def calculate_distance_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Calculate distance between two points using Haversine formula"""
+    import math
+    
+    R = 6371  # Earth's radius in kilometers
+    
+    lat1_rad = math.radians(lat1)
+    lat2_rad = math.radians(lat2)
+    delta_lat = math.radians(lat2 - lat1)
+    delta_lng = math.radians(lng2 - lng1)
+    
+    a = math.sin(delta_lat / 2) ** 2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lng / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    return R * c
+
+
+# P0 FIX #2: Background task to auto-cancel expired rides
+async def auto_cancel_expired_rides(ride_id: str, db: AsyncSession):
+    """Auto-cancel ride if not accepted within 5 minutes"""
+    await asyncio.sleep(300)  # Wait 5 minutes
+    
+    try:
+        result = await db.execute(
+            select(Ride).where(Ride.id == ride_id)
+        )
+        ride = result.scalar_one_or_none()
+        
+        if ride and ride.status == RideStatus.SEARCHING:
+            ride.status = RideStatus.CANCELLED
+            ride.cancelled_at = datetime.now(timezone.utc)
+            ride.cancelled_by = "system"
+            ride.cancellation_reason = "No driver found within time limit"
+            await db.commit()
+            
+            # Notify rider
+            await connection_manager.send_to_rider(
+                str(ride.rider_id),
+                {
+                    "event": "ride_cancelled",
+                    "ride_id": str(ride.id),
+                    "reason": "No driver found. Please try again.",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                }
+            )
+            logger.info(f"Auto-cancelled ride {ride_id} due to timeout")
+    except Exception as e:
+        logger.error(f"Error in auto-cancel task for ride {ride_id}: {e}")
 
 
 def decode_polyline(polyline: str) -> List[dict]:
@@ -164,6 +222,7 @@ async def get_fare_estimate(
 @router.post("/request")
 async def create_ride_request(
     request: CreateRideRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -242,6 +301,35 @@ async def create_ride_request(
     db.add(ride)
     await db.commit()
     await db.refresh(ride)
+    
+    # P0 FIX #2: Schedule auto-cancel task
+    from models.database import async_session
+    async def cancel_task():
+        async with async_session() as task_db:
+            await auto_cancel_expired_rides(str(ride.id), task_db)
+    
+    background_tasks.add_task(cancel_task)
+    
+    # P0 FIX #3: Broadcast new ride request to all online drivers
+    await connection_manager.broadcast_to_drivers({
+        "event": "new_ride_request",
+        "ride_id": str(ride.id),
+        "pickup": {
+            "lat": ride.pickup_lat,
+            "lng": ride.pickup_lng,
+            "address": ride.pickup_address
+        },
+        "drop": {
+            "lat": ride.drop_lat,
+            "lng": ride.drop_lng,
+            "address": ride.drop_address
+        },
+        "vehicle_type": ride.vehicle_type.value,
+        "estimated_fare": ride.estimated_fare,
+        "distance_km": ride.estimated_distance_km,
+        "duration_mins": ride.estimated_duration_mins,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
     
     return {
         "success": True,
@@ -419,8 +507,29 @@ async def accept_ride(
     if not profile.is_verified:
         raise HTTPException(status_code=403, detail="Your profile is not verified")
     
-    # Get the ride
-    result = await db.execute(select(Ride).where(Ride.id == ride_id))
+    # P0 FIX #1: Check if driver already has an active ride
+    active_ride_check = await db.execute(
+        select(Ride).where(
+            and_(
+                Ride.driver_id == current_user.id,
+                Ride.status.in_([
+                    RideStatus.ACCEPTED,
+                    RideStatus.ARRIVING,
+                    RideStatus.ARRIVED,
+                    RideStatus.IN_PROGRESS
+                ])
+            )
+        )
+    )
+    if active_ride_check.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="You already have an active ride")
+    
+    # P0 FIX #2: Use SELECT FOR UPDATE to prevent race condition
+    result = await db.execute(
+        select(Ride)
+        .where(Ride.id == ride_id)
+        .with_for_update()  # Lock the row
+    )
     ride = result.scalar_one_or_none()
     
     if not ride:
@@ -524,6 +633,16 @@ async def accept_ride(
     else:
         connection_manager.register_ride(str(ride.id), str(ride.rider_id), str(current_user.id))
     
+    # P0 FIX #5: Notify all other drivers that this ride is no longer available
+    await connection_manager.broadcast_to_drivers(
+        {
+            "event": "ride_no_longer_available",
+            "ride_id": str(ride.id),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        },
+        exclude={str(current_user.id)}  # Don't send to the driver who just accepted
+    )
+    
     return {
         "success": True,
         "message": "Ride accepted!",
@@ -616,6 +735,23 @@ async def driver_arrived(
     if ride.status != RideStatus.ARRIVING:
         raise HTTPException(status_code=400, detail="Invalid ride status")
     
+    # P1 FIX #7: Geofencing check - driver must be near pickup location
+    profile_result = await db.execute(
+        select(DriverProfile).where(DriverProfile.user_id == current_user.id)
+    )
+    profile = profile_result.scalar_one_or_none()
+    
+    if profile and profile.current_lat and profile.current_lng:
+        distance = calculate_distance_km(
+            profile.current_lat, profile.current_lng,
+            ride.pickup_lat, ride.pickup_lng
+        )
+        if distance > 0.2:  # Must be within 200 meters
+            raise HTTPException(
+                status_code=400, 
+                detail=f"You must be at the pickup location to mark arrived. You are {int(distance * 1000)}m away."
+            )
+    
     ride.status = RideStatus.ARRIVED
     await db.commit()
     await db.refresh(ride)
@@ -652,7 +788,7 @@ async def driver_arrived(
 @router.post("/{ride_id}/start")
 async def start_ride(
     ride_id: str,
-    request: Optional[StartRideRequest] = None,
+    request: StartRideRequest,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
@@ -666,8 +802,12 @@ async def start_ride(
     if ride.status != RideStatus.ARRIVED:
         raise HTTPException(status_code=400, detail="Invalid ride status")
 
-    if request and request.otp and request.otp != ride.get_start_otp():
-        raise HTTPException(status_code=400, detail="Invalid ride OTP")
+    # P1 FIX #8: Enforce OTP validation
+    if not request or not request.otp:
+        raise HTTPException(status_code=400, detail="OTP is required to start the ride")
+    
+    if request.otp != ride.get_start_otp():
+        raise HTTPException(status_code=400, detail="Invalid OTP. Please verify with the rider.")
     
     ride.status = RideStatus.IN_PROGRESS
     ride.started_at = datetime.now(timezone.utc)
@@ -702,6 +842,87 @@ async def start_ride(
     )
 
     return {"success": True, "message": "Ride started", "ride": ride.to_dict()}
+
+
+@router.post("/{ride_id}/track")
+async def add_tracking_point(
+    ride_id: str,
+    request: TrackLocationRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """P1 FIX #10: Add location tracking point during ride"""
+    result = await db.execute(select(Ride).where(Ride.id == ride_id))
+    ride = result.scalar_one_or_none()
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    if ride.driver_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the assigned driver can add tracking points")
+    
+    if ride.status not in [RideStatus.IN_PROGRESS, RideStatus.ARRIVING, RideStatus.ARRIVED]:
+        raise HTTPException(status_code=400, detail="Can only track active rides")
+    
+    # Save tracking point
+    tracking_point = RideTracking(
+        ride_id=ride.id,
+        lat=request.lat,
+        lng=request.lng,
+        timestamp=datetime.now(timezone.utc)
+    )
+    db.add(tracking_point)
+    await db.commit()
+    
+    return {
+        "success": True,
+        "message": "Tracking point added"
+    }
+
+
+@router.get("/{ride_id}/driver-location")
+async def get_driver_location(
+    ride_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """P2 FIX: Get current driver location for a ride"""
+    result = await db.execute(select(Ride).where(Ride.id == ride_id))
+    ride = result.scalar_one_or_none()
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    if ride.rider_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the rider can view driver location")
+    
+    if not ride.driver_id:
+        raise HTTPException(status_code=400, detail="No driver assigned yet")
+    
+    # Try to get from WebSocket manager first (real-time)
+    location = connection_manager.get_driver_location(str(ride.driver_id))
+    
+    if not location:
+        # Fallback to database
+        profile_result = await db.execute(
+            select(DriverProfile).where(DriverProfile.user_id == ride.driver_id)
+        )
+        profile = profile_result.scalar_one_or_none()
+        if profile and profile.current_lat and profile.current_lng:
+            location = {
+                "lat": profile.current_lat,
+                "lng": profile.current_lng,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+    
+    if not location:
+        raise HTTPException(status_code=404, detail="Driver location not available")
+    
+    return {
+        "success": True,
+        "location": location,
+        "ride_id": str(ride.id)
+    }
 
 
 @router.get("/{ride_id}/route")
@@ -779,15 +1000,42 @@ async def complete_ride(
     if ride.status != RideStatus.IN_PROGRESS:
         raise HTTPException(status_code=400, detail="Invalid ride status")
     
-    # Calculate actual fare based on actual distance/duration
-    # For now, use estimated values
-    ride.actual_fare = ride.estimated_fare
-    ride.actual_distance_km = ride.estimated_distance_km
-    ride.actual_duration_mins = ride.estimated_duration_mins
+    # P1 FIX #9: Calculate actual distance from tracking points
+    tracking_result = await db.execute(
+        select(RideTracking)
+        .where(RideTracking.ride_id == ride.id)
+        .order_by(RideTracking.timestamp)
+    )
+    tracking_points = tracking_result.scalars().all()
+    
+    actual_distance_km = ride.estimated_distance_km
+    if len(tracking_points) >= 2:
+        # Calculate total distance from tracking points
+        total_distance = 0.0
+        for i in range(len(tracking_points) - 1):
+            p1 = tracking_points[i]
+            p2 = tracking_points[i + 1]
+            total_distance += calculate_distance_km(p1.lat, p1.lng, p2.lat, p2.lng)
+        actual_distance_km = total_distance
+    
+    # Calculate actual duration
+    actual_duration_mins = ride.estimated_duration_mins
+    if ride.started_at:
+        duration = datetime.now(timezone.utc) - ride.started_at
+        actual_duration_mins = int(duration.total_seconds() / 60)
+    
+    # Recalculate fare based on actual values
+    fare_info = await fare_service.calculate_fare(
+        db, ride.vehicle_type.value, actual_distance_km, actual_duration_mins
+    )
+    
+    ride.actual_fare = fare_info["total_fare"]
+    ride.actual_distance_km = actual_distance_km
+    ride.actual_duration_mins = actual_duration_mins
     
     ride.status = RideStatus.COMPLETED
     ride.completed_at = datetime.now(timezone.utc)
-    ride.payment_status = "completed"  # Cash payment assumed complete
+    ride.payment_status = "pending"  # P1 FIX: Should be pending until driver confirms
     
     # Update driver stats
     driver_result = await db.execute(
@@ -963,10 +1211,21 @@ async def cancel_ride(
     if ride.status in [RideStatus.COMPLETED, RideStatus.CANCELLED]:
         raise HTTPException(status_code=400, detail="Ride cannot be cancelled")
     
+    # P1 FIX #12: Calculate cancellation fee based on ride status
+    cancellation_fee = 0.0
+    if is_rider:
+        if ride.status == RideStatus.ACCEPTED:
+            cancellation_fee = ride.estimated_fare * 0.2  # 20% fee
+        elif ride.status in [RideStatus.ARRIVING, RideStatus.ARRIVED]:
+            cancellation_fee = ride.estimated_fare * 0.5  # 50% fee
+        elif ride.status == RideStatus.IN_PROGRESS:
+            cancellation_fee = ride.estimated_fare  # Full fare
+    
     ride.status = RideStatus.CANCELLED
     ride.cancelled_at = datetime.now(timezone.utc)
     ride.cancelled_by = "rider" if is_rider else "driver"
     ride.cancellation_reason = request.reason
+    ride.actual_fare = cancellation_fee if cancellation_fee > 0 else None
     
     # If driver cancelled, set them back online
     if is_driver:
@@ -1039,6 +1298,39 @@ async def cancel_ride(
     connection_manager.complete_ride(str(ride.id))
     
     return {"success": True, "message": "Ride cancelled", "ride": ride.to_dict()}
+
+
+@router.post("/{ride_id}/confirm-payment")
+async def confirm_payment(
+    ride_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """P2 FIX: Driver confirms cash payment received"""
+    result = await db.execute(select(Ride).where(Ride.id == ride_id))
+    ride = result.scalar_one_or_none()
+    
+    if not ride:
+        raise HTTPException(status_code=404, detail="Ride not found")
+    
+    if ride.driver_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only the driver can confirm payment")
+    
+    if ride.status != RideStatus.COMPLETED:
+        raise HTTPException(status_code=400, detail="Ride must be completed first")
+    
+    if ride.payment_status == "completed":
+        raise HTTPException(status_code=400, detail="Payment already confirmed")
+    
+    ride.payment_status = "completed"
+    await db.commit()
+    
+    return {
+        "success": True,
+        "message": "Payment confirmed",
+        "ride_id": str(ride.id),
+        "amount": ride.actual_fare
+    }
 
 
 @router.get("/history")

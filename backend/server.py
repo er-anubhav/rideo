@@ -273,6 +273,22 @@ async def driver_websocket(
                     # Update in-memory location cache
                     connection_manager.update_driver_location(driver_id, lat, lng)
                     
+                    # P0 FIX #4: Persist location to database every update
+                    async for db in get_db():
+                        try:
+                            result = await db.execute(
+                                select(DriverProfile).where(DriverProfile.user_id == driver_id)
+                            )
+                            profile = result.scalar_one_or_none()
+                            if profile:
+                                profile.current_lat = lat
+                                profile.current_lng = lng
+                                await db.commit()
+                        except Exception as e:
+                            logger.error(f"Failed to persist driver location: {e}")
+                            await db.rollback()
+                        break
+                    
                     # If driver has an active ride, notify the rider
                     for ride_id, ride_info in connection_manager.active_rides.items():
                         if ride_info.get("driver_id") == driver_id:
