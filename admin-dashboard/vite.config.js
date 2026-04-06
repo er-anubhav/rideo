@@ -1,15 +1,15 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import backendConfig from '../backend.config.js';
 
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 3001,
     host: '0.0.0.0',
+    allowedHosts: ['.emergentagent.com', '.emergentcf.cloud'],
     proxy: {
       '/api': {
-        target: backendConfig.origin,
+        target: 'http://localhost:8001',
         changeOrigin: true,
       },
     },

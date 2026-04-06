@@ -13,7 +13,7 @@ const toWsOrigin = (origin) => {
 };
 
 // Update this origin whenever the backend host changes.
-export const BACKEND_ORIGIN = 'http://192.168.1.14:8001';
+export const BACKEND_ORIGIN = 'https://c8446806-4412-4e96-b48c-85d30906ff0f.preview.emergentagent.com';
 
 const normalizedOrigin = stripTrailingSlash(BACKEND_ORIGIN);
 
