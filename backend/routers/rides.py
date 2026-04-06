@@ -1157,7 +1157,7 @@ async def send_ride_sos(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """Record an SOS event and report how many admins were notified."""
+    """Send SOS alert and notify all admins"""
     result = await db.execute(select(Ride).where(Ride.id == ride_id))
     ride = result.scalar_one_or_none()
 
@@ -1167,23 +1167,81 @@ async def send_ride_sos(
     if current_user.id not in [ride.rider_id, ride.driver_id]:
         raise HTTPException(status_code=403, detail="You cannot access this ride")
 
+    # Get all active admins
     admins_result = await db.execute(
-        select(func.count(User.id)).where(
+        select(User).where(
             User.role == UserRole.ADMIN,
             User.is_active == True
         )
     )
-    notified_admins = admins_result.scalar() or 0
-
+    admins = admins_result.scalars().all()
+    
+    # Prepare SOS data
+    sos_data = {
+        "ride_id": str(ride.id),
+        "user_id": str(current_user.id),
+        "user_name": current_user.name,
+        "user_phone": current_user.phone,
+        "user_role": "rider" if current_user.id == ride.rider_id else "driver",
+        "message": request.message or "Emergency SOS Alert!",
+        "location": {
+            "latitude": request.latitude,
+            "longitude": request.longitude
+        },
+        "ride_details": {
+            "pickup": ride.pickup_address,
+            "drop": ride.drop_address,
+            "status": ride.status.value,
+            "driver_id": str(ride.driver_id) if ride.driver_id else None,
+            "rider_id": str(ride.rider_id)
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Send WebSocket notification to all admins
+    notified_count = 0
+    for admin in admins:
+        try:
+            await connection_manager.send_to_user(
+                str(admin.id),
+                {
+                    "event": "sos_alert",
+                    "priority": "critical",
+                    "title": "🚨 EMERGENCY SOS ALERT",
+                    "message": f"{sos_data['user_role'].upper()}: {current_user.name} needs help!",
+                    "data": sos_data
+                }
+            )
+            
+            # Also save as notification in database
+            from models.notification import Notification, NotificationType
+            notification = Notification(
+                user_id=admin.id,
+                title="🚨 EMERGENCY SOS ALERT",
+                body=f"{sos_data['user_role'].upper()} {current_user.name} ({current_user.phone}) triggered SOS. Location: {request.latitude}, {request.longitude}",
+                type=NotificationType.SOS,
+                data=sos_data,
+                created_at=datetime.now(timezone.utc)
+            )
+            db.add(notification)
+            notified_count += 1
+        except Exception as e:
+            logger.error(f"Failed to notify admin {admin.id}: {e}")
+    
+    await db.commit()
+    
+    logger.critical(f"SOS ALERT: Ride {ride_id}, User {current_user.name}, Location: {request.latitude},{request.longitude}")
+    
     return {
         "success": True,
-        "message": request.message or "SOS sent",
-        "notifiedAdmins": notified_admins,
+        "message": "SOS alert sent to admin team",
+        "notifiedAdmins": notified_count,
         "rideId": str(ride.id),
         "location": {
             "latitude": request.latitude,
-            "longitude": request.longitude,
+            "longitude": request.longitude
         },
+        "help": "Admin team has been notified. Help is on the way. Stay safe!"
     }
 
 

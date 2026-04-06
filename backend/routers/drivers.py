@@ -39,6 +39,13 @@ class ToggleOnlineRequest(BaseModel):
     lng: Optional[float] = None
 
 
+class NearbyDriversRequest(BaseModel):
+    lat: float
+    lng: float
+    radius_km: Optional[float] = 5.0  # Default 5km radius
+    vehicle_type: Optional[str] = None  # Filter by vehicle type
+
+
 @router.post("/register")
 async def register_driver(
     request: RegisterDriverRequest,
